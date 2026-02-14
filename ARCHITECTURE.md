@@ -4,82 +4,105 @@
 
 **Project Name:** fulfillment_ai  
 **Purpose:** Autonomous AI-driven system for proactive detection and resolution of retail fulfillment operational issues  
-**Use Case:** Celonis Garage - Process Mining + AI Agents for Order-to-Ship workflow
+**Use Case:** Process Mining + AI Agents for Order-to-Ship workflow
 
 ### Primary Goals
-1. **Proactive Risk Detection** - Identify delivery delays before they happen (not reactive)
+1. **Proactive Risk Detection** - Identify delivery delays before they happen 
 2. **Autonomous Resolution** - Trigger AI agents to simulate automatic issue resolution
 3. **Operational Visibility** - Real-time KPI monitoring and deviation detection
 4. **Extensible Design** - Support multiple agents, KPIs, and data sources
 
 ---
 
-## 2. Architecture Diagram
+## 2. Architecture Diagram (Including Stretch Goals)
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      fulfillment_ai System                       │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           fulfillment_ai System                              │
+│                   (Core + Stretch Goals: Streaming, Multi-Agent, RAG, UI)    │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-                         ┌──────────────────┐
-                         │   Data Ingestion │
-                         │   (CSV Dataset)  │
-                         └────────┬─────────┘
-                                  │
-                    ┌─────────────▼──────────────┐
-                    │  Data Layer (Pandas/CSV)   │
-                    │  - Load & Preprocess       │
-                    │  - Feature Engineering     │
-                    └─────────────┬──────────────┘
-                                  │
-        ┌─────────────────────────┼─────────────────────────┐
-        │                         │                         │
-   ┌────▼─────┐          ┌────────▼────────┐      ┌────────▼────────┐
-   │ KPI Calc │          │Risk Detection   │      │ Data Storage    │
-   │ Module   │          │Module (ML/Rule) │      │ (In-Memory/DB)  │
-   └────┬─────┘          └────────┬────────┘      └─────────────────┘
-        │                         │
-        └─────────────────────────┼─────────────────────┐
-                                  │                     │
-                          ┌───────▼──────────┐   ┌─────▼──────────────┐
-                          │ Deviation/Risk   │   │  Threshold Engine  │
-                          │ Assessment       │   │  (Rule-based)      │
-                          └───────┬──────────┘   └────────────────────┘
-                                  │
-                                  │ (if risk detected)
-                                  │
-                          ┌───────▼──────────────┐
-                          │  Event Queue / Pub   │
-                          │  (Trigger Agent)     │
-                          └───────┬──────────────┘
-                                  │
-                    ┌─────────────▼──────────────┐
-                    │   AI Agent Orchestrator    │
-                    │   - OpenAI/LangChain       │
-                    │   - Multi-turn capability  │
-                    │   - Simulate resolution    │
-                    └─────────────┬──────────────┘
-                                  │
-                ┌─────────────────┼─────────────────┐
-                │                 │                 │
-        ┌───────▼────────┐  ┌────▼────────┐  ┌────▼────────────┐
-        │  Agent Logics  │  │  Refund     │  │  Reschedule    │
-        │  - Draft Email │  │  Simulator  │  │  Simulator     │
-        │  - Status Upd  │  │             │  │                │
-        └────────────────┘  └─────────────┘  └────────────────┘
-                                  │
-                    ┌─────────────▼──────────────┐
-                    │   REST API Layer (FastAPI) │
-                    │   - /detect-deviation      │
-                    │   - /trigger-agent         │
-                    │   - /view-response         │
-                    │   - /kpi-dashboard         │
-                    └─────────────┬──────────────┘
-                                  │
-                    ┌─────────────▼──────────────┐
-                    │   Response Storage & Log   │
-                    │   (Agent decisions/output) │
-                    └────────────────────────────┘
+                    ┌──────────────────────────────┐
+                    │     Data Ingestion Layer     │
+                    ├──────────────────────────────┤
+                    │ CSV (Kaggle)  │  Kafka Topics
+                    │               │  (Real-time)
+                    └────────┬───────────┬──────────┘
+                             │           │
+          ┌──────────────────▼─┐   ┌─────▼──────────────┐
+          │  Batch Processing  │   │  Stream Processing │
+          │  (Pandas/Spark)    │   │  (Kafka Consumer)  │
+          └──────────┬─────────┘   └─────┬──────────────┘
+                     │                   │
+                     └────────┬──────────┘
+                              │
+              ┌───────────────▼──────────────┐
+              │   Unified Data Layer         │
+              │   (In-Memory + PostgreSQL)   │
+              └───────────────┬──────────────┘
+                              │
+          ┌───────────────────┼───────────────────┐
+          │                   │                   │
+     ┌────▼─────┐    ┌────────▼────────┐    ┌────▼──────────────┐
+     │ KPI Calc │    │Risk Detection   │    │   RAG Module      │
+     │ Module   │    │(ML/Rule-based)  │    │ (Knowledge Base)  │
+     │(Async)   │    │                 │    │ - Vector Store    │
+     └────┬─────┘    └────────┬────────┘    │ - Embeddings      │
+          │                   │              └────┬──────────────┘
+          └───────────────────┼──────────────────┘
+                              │
+                    ┌─────────▼──────────────┐
+                    │ Deviation Detector     │
+                    │ - Threshold breaches   │
+                    │ - Anomaly detection    │
+                    └─────────┬──────────────┘
+                              │
+                ┌─────────────▼──────────────┐
+                │  Event Stream / Message Q  │
+                │  (Kafka / Redis / RabbitMQ)│
+                │  - Deviation events        │
+                │  - Agent triggers          │
+                └─────────┬──────────────────┘
+                          │
+        ┌─────────────────┼──────────────────────┐
+        │                 │                      │
+        │    ┌────────────▼────────────┐   ┌────▼────────────────────┐
+        │    │ Multi-Agent Orchestrator│   │  Streaming KPI Scheduler │
+        │    │ (LangChain + OpenAI)    │   │  (APScheduler + Kafka)   │
+        │    │ - Agent Router          │   │  - Async KPI updates     │
+        │    │ - Context Management    │   │  - Real-time streaming   │
+        │    │ - Conversation History  │   └────┬────────────────────┘
+        │    └────────────┬────────────┘        │
+        │                 │                     │
+        │  ┌──────────────┴──────────────┐      │
+        │  │ Agent Types (Extensible)    │      │
+        │  ├──────────────────────────┤      │
+        │  │ • Shipment Agent         │      │
+        │  │ • Customer Service Agent │      │
+        │  │ • Payment/Refund Agent   │      │
+        │  │ • (Add more as needed)   │      │
+        │  └────────────┬─────────────┘      │
+        │               │                    │
+        └───────────────┼────────────────────┘
+                        │
+          ┌─────────────▼──────────────┐
+          │  Response Storage & Audit  │
+          │  (PostgreSQL/MongoDB)      │
+          │  - Agent decisions         │
+          │  - Resolution logs         │
+          │  - Conversation history    │
+          └─────────────┬──────────────┘
+                        │
+        ┌───────────────┼──────────────────┐
+        │               │                  │
+   ┌────▼────────┐ ┌───▼──────────┐  ┌──▼──────────────────┐
+   │  REST API   │ │ WebSocket API│  │  Streamlit UI       │
+   │  (FastAPI)  │ │ (Real-time)  │  │  (Monitoring Dash)  │
+   │  - CRUD     │ │ - KPI stream │  │  - KPI dashboard    │
+   │  - Agent    │ │ - Live alerts│  │  - Agent logs       │
+   │  - Triggers │ │              │  │  - Order tracking   │
+   └─────────────┘ └──────────────┘  │  - Manual triggers  │
+                                      └─────────────────────┘
 ```
 
 ---
@@ -134,19 +157,26 @@
 
 ---
 
-### 3.5 AI Agent Orchestrator
-**Responsibility:** Execute autonomous resolution logic  
-**Technology:** OpenAI API, LangChain, or custom rules  
-**Multi-Turn Capabilities:**
+### 3.5 Multi-Agent Orchestrator (Core + Stretch Goal)
+**Responsibility:** Execute autonomous resolution logic via specialized agents  
+**Technology:** OpenAI API, LangChain, RAG modules  
+**Core Capabilities:**
 - Receive deviation event → analyze context
-- Generate resolution strategy (refund, reschedule, customer communication)
-- Simulate multi-step resolution (e.g., "Check refund eligibility" → "Draft email" → "Update order status")
-- Log decision trail for transparency
+- Route to appropriate agent (shipment, customer, payment)
+- Generate resolution strategy (refund, reschedule, communication)
+- Simulate multi-step resolution with conversation history
+- Log full decision trail for transparency
 
-**Agents to Support:**
-- **Delivery Agent** - Reschedule shipment, contact carrier
-- **Customer Agent** - Draft apology email, offer compensation
-- **Refund Agent** - Evaluate refund eligibility, simulate refund
+**Agent Types (Extensible):**
+- **Shipment Agent** - Reschedule shipment, contact carrier, track status
+- **Customer Service Agent** - Draft apology/communication, offer compensation
+- **Payment/Refund Agent** - Evaluate refund eligibility, simulate refund processing
+- **Escalation Agent** - Route complex cases to human support
+
+**Context Management:**
+- RAG-powered knowledge base for customer/order context
+- Multi-turn conversation memory
+- Agent state persistence
 
 ---
 
@@ -168,19 +198,76 @@
 
 ---
 
-### 3.7 Logging & Monitoring
+### 3.7 RAG Knowledge Base (Stretch Goal)
+**Responsibility:** Provide context-aware information for agent decision-making  
+**Technology:** LangChain, Vector Database (Chroma/Pinecone), OpenAI Embeddings  
+**Key Features:**
+- Vector store of customer policies, refund rules, SLAs
+- Order history embeddings for similarity search
+- Real-time knowledge updates
+- Retrieval augmentation for agent prompts
+
+**Knowledge Types:**
+- Company policies (refund, warranty, shipping)
+- Historical agent responses (learning database)
+- Customer communication templates
+- Regulatory/compliance information
+
+---
+
+### 3.8 Streaming KPI Module (Stretch Goal)
+**Responsibility:** Real-time KPI updates and streaming to clients  
+**Technology:** Kafka, APScheduler, WebSocket (FastAPI)  
+**Architecture:**
+- **Kafka Producer** - KPI calc module publishes updates to Kafka topics
+- **Kafka Consumer** - Subscribes to KPI streams, updates in-memory cache
+- **APScheduler** - Triggers periodic KPI recalculation
+- **WebSocket API** - Push KPI updates to connected clients
+
+**Capabilities:**
+- Real-time KPI streaming (metrics per order, segment, region)
+- Adaptive threshold monitoring
+- Historical KPI retention
+- Client subscription management
+
+---
+
+### 3.9 Monitoring Dashboard (Stretch Goal)
+**Responsibility:** Visual monitoring and manual intervention interface  
+**Technology:** Streamlit, Plotly, Pandas  
+**Features:**
+- Real-time KPI visualization (charts, gauges)
+- Deviation alerts (color-coded severity)
+- Agent decision logs (searchable, filterable)
+- Order tracking with status updates
+- Manual agent triggering (for testing)
+- RAG knowledge base management
+
+**Views:**
+- Dashboard (KPI summary, alerts, stats)
+- Orders (search, filter, drill-down)
+- Agents (execution logs, decision trails)
+- Knowledge Base (add/edit policies)
+- Settings (thresholds, configuration)
+
+---
+
+### 3.10 Logging & Monitoring
 **Responsibility:** Audit trail, error tracking, performance metrics  
-**Technology:** Python logging, optional Prometheus/CloudWatch  
+**Technology:** Python logging, ELK Stack (optional), Prometheus  
 **Logs:**
-- All KPI calculations
-- Deviation events with timestamps
-- Agent triggers and decisions
-- API requests/responses
+- All KPI calculations with timestamps
+- Deviation events with severity & context
+- Agent triggers, decisions, and outputs
+- API requests/responses with latency
+- Streaming KPI updates
+- User actions (Streamlit dashboard)
 
 ---
 
 ## 4. Tech Stack Justification
 
+### Core Stack
 | Layer | Technology | Justification |
 |-------|-----------|---------------|
 | **Data Processing** | Pandas, NumPy | Fast, familiar, DSL for tabular data; ideal for CSV |
@@ -192,6 +279,17 @@
 | **VCS** | Git + GitHub | Standard, easy collaboration, CI/CD ready |
 | **Testing** | pytest | Comprehensive, fixtures, plugin ecosystem |
 | **Documentation** | Markdown + OpenAPI | Version-controlled, auto-generated API docs |
+
+### Stretch Goal Stack
+| Component | Technology | Justification |
+|-----------|-----------|---------------|
+| **Streaming KPI** | Kafka + Zookeeper | Distributed event streaming; scales to high-throughput |
+| **Real-time WebSocket** | FastAPI WebSocket | Native async support; lightweight real-time |
+| **RAG Vector DB** | Chroma (Embeddings) | Lightweight, in-process; Pinecone (cloud) as alternative |
+| **RAG Embeddings** | OpenAI Embeddings API | High-quality semantic search; integrated with LangChain |
+| **Monitoring Dashboard** | Streamlit + Plotly | Rapid development; interactive visualizations |
+| **Persistence** | PostgreSQL | ACID compliance; good for structured agent data |
+| **Message Queue** | Redis (optional) | In-memory queue for event handling; Kafka for scale |
 
 ---
 
@@ -242,94 +340,148 @@ docker-compose up -d
 
 ## 6. Assumptions & Limitations
 
-### Assumptions
+### Assumptions (Core)
 1. **Data Quality** - Kaggle dataset is representative of real retail order flows
-2. **Single Agent Instance** - One agent at a time (can extend to multi-agent later)
-3. **Simulated Resolutions** - Refund/reschedule are simulated, not real transactions
-4. **Synchronous Processing** - KPI calc runs on-demand (can make async with scheduler)
-5. **No Authentication** - Open API for Garage demo (add OAuth in production)
-6. **In-Memory Cache** - Data cached in RAM for this phase (use DB for scale)
+2. **Simulated Resolutions** - Refund/reschedule are simulated, not real transactions
+3. **No Authentication** - Open API for Garage demo (add OAuth in production)
 
-### Limitations
+### Stretch Goal Assumptions
+1. **Kafka Availability** - Kafka cluster available for streaming (can use in-memory queue for MVP)
+2. **Vector DB Setup** - Chroma or Pinecone available (can use in-memory embeddings)
+3. **PostgreSQL** - Database available for persistence (optional, SQLite fallback)
+4. **Streamlit Environment** - Development environment for Streamlit UI
+
+### Limitations (Core)
 1. **ML Models** - Using heuristics for delay prediction (can train real ML model)
-2. **No Streaming** - Batch KPI calculation, not real-time (Kafka optional extension)
-3. **Single Data Source** - Only CSV input (extend with APIs later)
-4. **No Multi-Agent Coordination** - Agents don't communicate (future work)
-5. **Limited Agent Memory** - Agent context window is basic (can enhance with RAG)
+2. **Single Data Source** - Only CSV input (extend with APIs later)
+3. **Limited Agent Memory** - Agent context is basic without RAG
+
+### Stretch Goal Limitations
+1. **RAG Knowledge Scope** - Limited to documents provided (can expand with web scraping)
+2. **Multi-Agent Coordination** - Agents don't communicate between decisions (v2 feature)
+3. **Streaming Latency** - KPI updates depend on Kafka processing time
+4. **Streamlit Scalability** - UI designed for single concurrent user (move to React/Vue for scale)
 
 ---
 
-## 7. Future Extensions
+## 7. Implementation Scope
 
-### Near-term
-- [ ] Multi-agent system (shipment, payment, customer agents)
-- [ ] Lightweight RAG knowledge base for agent context
-- [ ] Streaming KPI updates via APScheduler
-- [ ] Streamlit UI for monitoring/interaction
-- [ ] PostgreSQL for persistent data & audit logs
-- [ ] GitHub Actions for CI/CD + Docker push
+### Core Features (MVP)
+- ✅ Data loading & preprocessing
+- ✅ KPI calculation (synchronous)
+- ✅ Deviation detection (rule-based)
+- ✅ Single AI agent (OpenAI)
+- ✅ REST API
+- ✅ Docker setup
 
-### Medium-term
-- [ ] Kafka-based event streaming for real-time KPI
+### Stretch Goals (Implementation Target)
+- 🎯 Multi-agent system (shipment, customer, payment, escalation)
+- 🎯 Lightweight RAG knowledge base for agent context
+- 🎯 Streaming KPI updates (Kafka + WebSocket)
+- 🎯 Streamlit UI for monitoring & interaction
+- 🎯 PostgreSQL for persistent data & audit logs
+- 🎯 Conversation history & multi-turn agent memory
+- 🎯 GitHub Actions CI/CD pipeline
+
+### Future Extensions (v2+)
 - [ ] ML-based delay prediction (XGBoost/LightGBM)
-- [ ] Multi-turn conversation history in agent
 - [ ] Email/SMS integration for customer communication
 - [ ] Metrics dashboard (Prometheus + Grafana)
-
-### Long-term
 - [ ] Process Mining integration (Celonis platform)
 - [ ] Advanced RL agent for optimization
 - [ ] Multi-tenant architecture
 - [ ] Mobile app for monitoring
-- [ ] Integration with ERP/WMS systems
+- [ ] ERP/WMS system integrations
+- [ ] Multi-region deployment
+- [ ] Advanced agent reasoning (o1, Claude 3)
 
 ---
 
-## 8. Project Structure
+## 8. Project Structure (Core + Stretch Goals)
 
 ```
 fulfillment_ai/
 ├── ARCHITECTURE.md          # This document
 ├── README.md                # Getting started guide
 ├── requirements.txt         # Python dependencies
+├── requirements-streaming.txt # Optional: Kafka, Streamlit
 ├── Dockerfile               # Container image
 ├── docker-compose.yml       # Local dev setup
+├── docker-compose-full.yml  # Full setup with Kafka, PostgreSQL, Redis
 ├── .gitignore               # Git ignore rules
 ├── .env.example             # Environment template
 │
 ├── src/
 │   ├── __init__.py
-│   ├── api.py               # FastAPI app
+│   ├── api.py               # FastAPI app (core + WebSocket endpoints)
 │   ├── config.py            # Config & env vars
 │   │
 │   ├── data/
 │   │   ├── __init__.py
 │   │   ├── loader.py        # CSV loading logic
-│   │   └── preprocessor.py  # Data cleaning
+│   │   └── preprocessor.py  # Data cleaning & feature engineering
 │   │
 │   ├── kpi/
 │   │   ├── __init__.py
-│   │   ├── calculator.py    # KPI computation
-│   │   └── definitions.py   # KPI specs/thresholds
+│   │   ├── calculator.py    # KPI computation (sync)
+│   │   ├── calculator_async.py # Async KPI calculation
+│   │   ├── definitions.py   # KPI specs/thresholds
+│   │   └── streamer.py      # Streaming KPI updates (STRETCH GOAL)
 │   │
 │   ├── detection/
 │   │   ├── __init__.py
 │   │   ├── deviation.py     # Deviation detection logic
-│   │   └── threshold.py     # Threshold rules
+│   │   ├── threshold.py     # Threshold rules
+│   │   └── event_publisher.py # Kafka event publishing
 │   │
 │   ├── agent/
 │   │   ├── __init__.py
-│   │   ├── orchestrator.py  # Agent coordinator
-│   │   ├── prompts.py       # LLM prompts
-│   │   └── handlers/
-│   │       ├── delivery.py  # Delivery agent
-│   │       ├── customer.py  # Customer agent
-│   │       └── refund.py    # Refund agent
+│   │   ├── orchestrator.py  # Multi-agent coordinator (STRETCH GOAL)
+│   │   ├── prompts.py       # LLM prompts with RAG context
+│   │   ├── handlers/
+│   │   │   ├── base_agent.py      # Base agent class
+│   │   │   ├── shipment.py        # Shipment agent
+│   │   │   ├── customer.py        # Customer service agent
+│   │   │   ├── refund.py          # Refund agent
+│   │   │   └── escalation.py      # Escalation agent
+│   │   └── state_manager.py # Conversation history/memory
 │   │
-│   └── models/
+│   ├── rag/                 # RAG Knowledge Base (STRETCH GOAL)
+│   │   ├── __init__.py
+│   │   ├── knowledge_base.py # Vector store & embeddings
+│   │   ├── document_loader.py # Load policies, templates
+│   │   ├── retriever.py     # RAG retrieval logic
+│   │   └── updater.py       # Update knowledge base
+│   │
+│   ├── streaming/           # Streaming & Real-time (STRETCH GOAL)
+│   │   ├── __init__.py
+│   │   ├── kafka_producer.py # Kafka producer for KPI events
+│   │   ├── kafka_consumer.py # Kafka consumer for KPI updates
+│   │   ├── scheduler.py     # Periodic KPI scheduler
+│   │   └── websocket_manager.py # WebSocket connection management
+│   │
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── schemas.py       # Pydantic models
+│   │   └── database.py      # SQLAlchemy DB models (PostgreSQL)
+│   │
+│   └── utils/
 │       ├── __init__.py
-│       ├── schemas.py       # Pydantic models
-│       └── database.py      # Optional DB models
+│       ├── logger.py        # Logging configuration
+│       └── cache.py         # Caching utilities
+│
+├── ui/                      # Streamlit Dashboard (STRETCH GOAL)
+│   ├── __init__.py
+│   ├── app.py               # Main Streamlit app
+│   ├── pages/
+│   │   ├── dashboard.py     # KPI dashboard
+│   │   ├── orders.py        # Order search & tracking
+│   │   ├── agents.py        # Agent logs & triggers
+│   │   ├── knowledge_base.py # RAG KB management
+│   │   └── settings.py      # Configuration UI
+│   └── components/
+│       ├── charts.py        # Visualization components
+│       └── tables.py        # Data table components
 │
 ├── tests/
 │   ├── __init__.py
@@ -337,19 +489,34 @@ fulfillment_ai/
 │   ├── test_kpi.py
 │   ├── test_detection.py
 │   ├── test_agent.py
-│   └── test_api.py
+│   ├── test_api.py
+│   ├── test_rag.py          # RAG module tests
+│   ├── test_streaming.py    # Streaming module tests
+│   └── fixtures/            # Test fixtures and mocks
 │
 ├── data/
 │   ├── raw/                 # Original CSV files
-│   └── processed/           # Preprocessed data
+│   ├── processed/           # Preprocessed data
+│   └── knowledge/           # RAG knowledge documents
 │
 ├── logs/
 │   └── app.log              # Application logs
 │
-└── docs/
-    ├── setup.md             # Detailed setup
-    ├── api_examples.md      # API usage examples
-    └── kpi_definitions.md   # KPI specifications
+├── docs/
+│   ├── setup.md             # Detailed setup
+│   ├── setup-streaming.md   # Kafka & streaming setup
+│   ├── api_examples.md      # API usage examples
+│   ├── kpi_definitions.md   # KPI specifications
+│   ├── agent_design.md      # Multi-agent architecture
+│   └── rag_guide.md         # RAG knowledge base guide
+│
+└── config/
+    ├── kafka/               # Kafka configuration files
+    │   └── topics.yaml      # KPI topic definitions
+    ├── rag/                 # RAG configuration
+    │   └── policies.yaml    # Policy templates
+    └── agents/              # Agent configuration
+        └── agents.yaml      # Agent role definitions
 ```
 
 ---
@@ -381,17 +548,50 @@ fulfillment_ai/
 
 ---
 
-## 11. Open Questions / Next Steps
+## 11. Stretch Goal Design Decisions
 
+### Streaming & Real-Time KPI
+- **Kafka vs Redis:** Kafka for scalability and durability; Redis as fallback for simplicity
+- **Update Frequency:** Configurable (default: 5-minute intervals)
+- **WebSocket Broadcasting:** Selective updates (only connected clients receive streams)
+
+### Multi-Agent System
+- **Agent Router:** LangChain's function calling for intelligent agent selection
+- **Fallback Strategy:** Escalation agent for unhandled cases
+- **Agent Specialization:** Each agent has specific prompts and allowed actions
+
+### RAG Knowledge Base
+- **Vector Store:** Chroma (development) → Pinecone (production)
+- **Embedding Model:** OpenAI's text-embedding-3-small
+- **Update Strategy:** Manual + automated ingestion of new policies
+- **Retrieval:** Top-5 relevant documents per agent query
+
+### Streamlit Dashboard
+- **Responsiveness:** Real-time KPI updates via WebSocket
+- **User Actions:** Manual agent triggering, threshold adjustment
+- **Data Refresh:** Configurable auto-refresh intervals
+- **Multi-page:** Modular pages for different admin views
+
+---
+
+## 12. Open Questions / Next Steps
+
+### Core Implementation
 1. **Which KPIs matter most** for the demo? (Delay prediction vs. segment risk?)
 2. **How detailed should agent responses** be? (Simple email draft vs. multi-turn conversation?)
 3. **Threshold values** - What constitute "high risk"? (70% delay probability? X days late?)
 4. **Data enrichment** - Generate synthetic delivery dates or use CSV as-is?
-5. **Agent training** - Will you provide sample agent responses to learn from?
+
+### Stretch Goals
+5. **Kafka Setup** - Use Docker Kafka or assume existing cluster?
+6. **Vector DB** - Start with Chroma in-memory or Pinecone cloud?
+7. **Agent Knowledge** - What policies/documents should be in RAG KB?
+8. **Dashboard Features** - Priority features for Streamlit MVP?
+9. **Multi-Agent Routing** - How to determine which agent to use?
 
 ---
 
-**Document Version:** 1.0  
+**Document Version:** 2.0 (Updated with Stretch Goals)  
 **Last Updated:** 2026-02-14  
 **Author:** scriperdj  
-**Status:** Draft (ready for implementation)
+**Status:** Ready for implementation (Core + Stretch Goals)

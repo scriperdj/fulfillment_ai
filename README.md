@@ -8,12 +8,19 @@ Built for Celonis Garage Technical Challenge.
 
 fulfillment_ai combines **process monitoring** (KPI tracking), **risk detection** (ML/heuristics), and **autonomous AI agents** (LLM-driven resolution) to proactively prevent delivery delays and optimize fulfillment operations.
 
-### Key Features
+### Core Features
 - ✅ Real-time KPI monitoring (delivery delays, segment risk, fulfillment gaps)
 - ✅ Proactive deviation detection (predict issues before they happen)
 - ✅ Autonomous AI agents (OpenAI + LangChain for resolution)
 - ✅ REST API for triggering and monitoring
 - ✅ Dockerized, cloud-native architecture
+
+### Stretch Goal Features
+- 🎯 **Streaming KPI Updates** - Real-time KPI streaming via Kafka + WebSocket
+- 🎯 **Multi-Agent System** - Specialized agents (shipment, customer, refund, escalation)
+- 🎯 **RAG Knowledge Base** - Context-aware agent decisions with vector search
+- 🎯 **Monitoring Dashboard** - Interactive Streamlit UI for KPI visualization & management
+- 🎯 **Persistent Storage** - PostgreSQL backend for agent logs & audit trails
 
 ---
 

@@ -16,96 +16,84 @@ Autonomous AI-driven system for proactive detection and resolution of retail ful
 ## 2. Architecture Diagram
 
 ```mermaid
-graph TB
-    subgraph Upstream["Upstream Systems (Simulated)"]
-        OMS["OMS<br/>Orders"]
-        WMS["WMS<br/>Warehouse"]
-        TMS["TMS<br/>Shipping"]
-        CRM["CRM<br/>Customer"]
-        PIM["PIM<br/>Product"]
-        PRICING["Pricing<br/>Engine"]
+flowchart TD
+    subgraph UPSTREAM["Upstream Systems (Simulated)"]
+        direction LR
+        OMS["OMS"]
+        WMS["WMS"]
+        TMS["TMS"]
+        CRM["CRM"]
+        PIM["PIM"]
+        PRICING["Pricing"]
     end
 
-    subgraph Integration["Data Integration Layer"]
-        CSV["CSV Export<br/>(Batch)"]
-        KAFKA_PROD["Kafka Producer<br/>(Streaming)"]
+    subgraph INTEGRATION["Data Integration"]
+        direction LR
+        CSV["CSV Upload"]
+        PRODUCER["Kafka Producer"]
     end
 
-    subgraph Ingestion["Data Ingestion"]
-        BATCH["Batch Pipeline<br/>CSV Upload → FastAPI"]
-        STREAM["Stream Pipeline<br/>Kafka Consumer →<br/>fulfillment-events"]
+    subgraph AIRFLOW["Airflow 3.x"]
+        BATCH_DAG["Batch DAG<br/>API-triggered"]
+        STREAM_DAG["Streaming DAG<br/>Kafka trigger · 15s / 1K micro-batch"]
+        AGENT_DAG["Agent DAG<br/>Kafka trigger"]
     end
 
-    TRANSFORM["Transform / Feature Engineering<br/>Raw upstream → 10 model features"]
-
-    ML["ML Inference Engine<br/>Trained classifier: on-time vs late<br/>Output: delay_probability (0.0–1.0)"]
-
-    KPI["KPI Calculation Module<br/>Segment Risk · Fulfillment Gap<br/>On-Time Rate · High-Risk Count"]
-    DEVIATION["Deviation Detector<br/>ML threshold + Rule-based<br/>Critical > 0.7 · Warning > 0.5 · Info > 0.3"]
-
-    EVENTBUS["Event Bus<br/>(In-memory / Kafka)<br/>Deviation events · Agent triggers"]
-
-    subgraph AgentSystem["Multi-Agent System"]
-        ORCHESTRATOR["Orchestrator<br/>(LLM-based Router)<br/>Analyzes deviation →<br/>selects specialist via fn calling"]
-
-        SHIPMENT["Shipment Agent<br/>Tools: reschedule_shipment<br/>check_carrier · transfer_warehouse"]
-        CUSTOMER["Customer Svc Agent<br/>Tools: draft_email<br/>send_notification · log_interaction"]
-        PAYMENT["Payment/Refund Agent<br/>Tools: check_eligibility<br/>issue_refund · apply_credit"]
-        ESCALATION["Escalation Agent<br/>Tools: create_ticket<br/>assign_human · flag_priority"]
-
-        subgraph RAG["RAG Knowledge Base (Chroma)"]
-            direction LR
-            INGEST["Ingestion<br/>① Startup: policy docs<br/>② Runtime: resolution logs<br/>③ Admin API: live updates"]
-            QUERY["Query<br/>① Pre-execution: auto top-K<br/>② Mid-execution: agent tool<br/>search_knowledge_base()"]
-        end
+    subgraph PIPELINE["Unified Processing Pipeline"]
+        direction LR
+        FE["Feature<br/>Engineering"] --> INFER["ML Inference"] --> KPIE["KPI Engine<br/>30-day rolling"] --> DETECT["Deviation<br/>Detector"]
     end
 
-    AUDIT["Response Storage & Audit<br/>Agent decisions · Resolution logs<br/>Prediction history"]
+    PG[("PostgreSQL<br/>predictions · deviations<br/>agent_responses")]
 
-    subgraph Presentation["Presentation Layer"]
-        API["REST API (FastAPI)<br/>Predict · KPIs · Agent<br/>Knowledge · Deviations"]
-        WS["WebSocket API<br/>KPI stream · Live alerts"]
-        UI["Streamlit Dashboard<br/>KPI charts · Agent logs<br/>Order tracking · KB mgmt"]
+    DEV_TOPIC{{"deviation-events"}}
+
+    subgraph AGENTS["Multi-Agent System"]
+        ORCH["LLM Orchestrator"]
+        SHIP["Shipment"]
+        CUST["Customer"]
+        PAY["Payment"]
+        ESC["Escalation"]
+        ORCH --> SHIP & CUST & PAY & ESC
     end
 
-    Upstream --> Integration
-    CSV --> BATCH
-    KAFKA_PROD --> STREAM
-    BATCH --> TRANSFORM
-    STREAM --> TRANSFORM
-    TRANSFORM --> ML
-    ML --> KPI
-    ML --> DEVIATION
-    KPI --> EVENTBUS
-    DEVIATION --> EVENTBUS
-    EVENTBUS --> ORCHESTRATOR
-    ORCHESTRATOR --> SHIPMENT
-    ORCHESTRATOR --> CUSTOMER
-    ORCHESTRATOR --> PAYMENT
-    ORCHESTRATOR --> ESCALATION
-    SHIPMENT <--> RAG
-    CUSTOMER <--> RAG
-    PAYMENT <--> RAG
-    ESCALATION <--> RAG
-    SHIPMENT --> AUDIT
-    CUSTOMER --> AUDIT
-    PAYMENT --> AUDIT
-    ESCALATION --> AUDIT
-    AUDIT --> RAG
-    AUDIT --> API
-    AUDIT --> WS
-    AUDIT --> UI
+    RAG[("Chroma · RAG<br/>Policies · SLAs · History")]
 
-    style Upstream fill:#e1f5fe,stroke:#0288d1
-    style Integration fill:#fff3e0,stroke:#f57c00
-    style Ingestion fill:#fff3e0,stroke:#f57c00
-    style AgentSystem fill:#fce4ec,stroke:#c62828
-    style RAG fill:#f3e5f5,stroke:#7b1fa2
-    style Presentation fill:#e8f5e9,stroke:#2e7d32
-    style ML fill:#fff9c4,stroke:#f9a825
-    style TRANSFORM fill:#fff9c4,stroke:#f9a825
-    style EVENTBUS fill:#ffecb3,stroke:#ff8f00
-    style AUDIT fill:#e0e0e0,stroke:#616161
+    subgraph PRESENTATION["Presentation Layer"]
+        direction LR
+        API["FastAPI"]
+        DASH["Streamlit"]
+    end
+
+    UPSTREAM --> INTEGRATION
+    CSV --> BATCH_DAG
+    PRODUCER --> STREAM_DAG
+    BATCH_DAG & STREAM_DAG --> PIPELINE
+    PIPELINE -- store --> PG
+    PG -. historical .-> KPIE
+    DETECT -- severity ≥ warning --> DEV_TOPIC
+    DEV_TOPIC --> AGENT_DAG
+    AGENT_DAG --> ORCH
+    SHIP & CUST & PAY & ESC <-. retrieve .-> RAG
+    SHIP & CUST & PAY & ESC -- store --> PG
+    SHIP & CUST & PAY & ESC -. ingest .-> RAG
+    PG --> PRESENTATION
+
+    classDef infra fill:#f0f4f8,stroke:#4a5568,color:#1a202c
+    classDef orchestration fill:#ebf4ff,stroke:#3182ce,color:#1a202c
+    classDef processing fill:#fefcbf,stroke:#d69e2e,color:#1a202c
+    classDef agents fill:#fff5f5,stroke:#e53e3e,color:#1a202c
+    classDef output fill:#f0fff4,stroke:#38a169,color:#1a202c
+    classDef store fill:#f7fafc,stroke:#4a5568,color:#1a202c
+    classDef event fill:#fefcbf,stroke:#d69e2e,color:#1a202c
+
+    class UPSTREAM,INTEGRATION infra
+    class AIRFLOW orchestration
+    class PIPELINE processing
+    class AGENTS agents
+    class PRESENTATION output
+    class PG,RAG store
+    class DEV_TOPIC event
 ```
 
 ---
@@ -172,30 +160,50 @@ payment_status        ← Pricing (simulated: paid, pending, refunded)
 order_status          ← OMS (simulated: processing, shipped, delivered, delayed)
 ```
 
-### 3.4 Data Pipeline Flow
+### 3.4 Unified Processing Pipeline
+
+Transform → Inference → KPI → Deviation runs as a **single atomic job**. The same pipeline code is used by both batch and streaming paths.
 
 ```
 Enriched Input (CSV or Kafka message)
     │
     ▼
-Transform / Feature Engineering
-    │  - Extract the 10 features the ML model expects
-    │  - Encode categoricals (same encoding as training)
-    │  - Keep raw fields for KPI calculations
+┌─────────────────────────────────────────────────────┐
+│  Unified Processing Pipeline (single job)           │
+│                                                     │
+│  1. Transform / Feature Engineering                 │
+│     - Extract 10 model features                     │
+│     - Encode categoricals (same as training)        │
+│     - Keep raw fields for KPI calculations          │
+│                                                     │
+│  2. ML Inference                                    │
+│     - Input: [warehouse_block, mode_of_shipment,    │
+│       customer_care_calls, customer_rating,         │
+│       cost_of_product, prior_purchases,             │
+│       product_importance, gender,                   │
+│       discount_offered, weight_in_gms]              │
+│     - Output: delay_probability (0.0 - 1.0)        │
+│                                                     │
+│  3. Store prediction → Postgres (predictions table)  │
+│                                                     │
+│  4. KPI Engine                                      │
+│     - Running averages from historical + current    │
+│     - Query Postgres predictions for cumulative     │
+│       metrics                                       │
+│                                                     │
+│  5. Deviation Detector                              │
+│     - ML threshold + KPI breach check               │
+│     - If deviation: publish to Kafka                 │
+│       deviation-events topic                        │
+└─────────────────────────────────────────────────────┘
     │
-    ├──▶ ML Model Input: [warehouse_block, mode_of_shipment,
-    │     customer_care_calls, customer_rating, cost_of_product,
-    │     prior_purchases, product_importance, gender,
-    │     discount_offered, weight_in_gms]
-    │
-    ├──▶ ML Inference → delay_probability (0.0 - 1.0)
-    │
-    ├──▶ KPI Engine (uses raw fields + prediction output)
-    │
-    └──▶ Deviation Detector (prediction threshold + KPI breaches)
-             │
-             └──▶ Agent Trigger (if deviation detected)
+    ▼
+Kafka deviation-events → Airflow Agent DAG → Orchestrator → Agents
 ```
+
+**Execution context:**
+- **Batch:** Airflow Batch DAG triggers pipeline as a task (CSV → process all rows → deviations to Kafka)
+- **Streaming:** Airflow Streaming DAG consumes `fulfillment-events` via Kafka trigger, collects micro-batches (15s / 1K max) → runs pipeline in bulk → deviations to Kafka
 
 ### 3.5 Batch vs Streaming Input
 
@@ -203,11 +211,12 @@ Transform / Feature Engineering
 |---|---|---|
 | **Source** | CSV file uploaded via API | `fulfillment-events` Kafka topic |
 | **Producer** | Assumed external script/ETL that pulls from upstream systems | Kafka Producer Simulator (generates enriched events at configurable intervals) |
-| **Consumer** | FastAPI endpoint parses CSV, runs bulk predictions | Kafka Consumer reads events, runs per-record inference |
+| **Orchestration** | Airflow Batch DAG triggered by API upload | Airflow Streaming DAG with Kafka consumer trigger (runs continuously) |
+| **Processing** | Airflow task calls unified pipeline on all rows | Airflow task collects micro-batch (15s / 1K max) → pipeline in bulk |
 | **Use Case** | Historical analysis, bulk risk scoring | Real-time monitoring, live delay detection |
-| **Output** | CSV/JSON response with predictions + KPIs | Deviation events → agent triggers in real-time |
+| **Output** | CSV/JSON response with predictions + KPIs | Deviation events to Kafka → Airflow Agent DAG |
 
-**Production note:** In a real deployment, upstream systems would publish to their own Kafka topics (e.g., `oms-orders`, `wms-shipments`, `crm-events`). A stream processing layer (Kafka Streams / Flink) would join and enrich these into a unified `fulfillment-events` topic. Our architecture consumes from this unified topic — the Kafka Producer Simulator stands in for that upstream integration layer.
+**Production note:** In a real deployment, upstream systems would publish to their own topics (e.g., `oms-orders`, `wms-shipments`, `crm-events`). A stream processing layer (Kafka Streams / Flink) would join and enrich these into a unified `fulfillment-events` topic. Our architecture consumes from this unified topic — the Kafka Producer Simulator stands in for that upstream integration layer.
 
 ---
 
@@ -240,25 +249,110 @@ Transform / Feature Engineering
 **Technology:** joblib, FastAPI
 
 **Serving modes:**
-- **Batch:** POST CSV to `/predict/batch` → returns predictions for all rows
-- **Streaming:** Kafka consumer deserializes event → calls model → emits prediction
-- **Single:** POST JSON to `/predict` → returns prediction for one order
+- **Batch:** POST CSV to `/predict/batch` → async (returns `batch_job_id`) → Airflow DAG runs pipeline → results in Postgres
+- **Streaming:** Airflow Streaming DAG consumes from Kafka → calls model → stores prediction in Postgres → deviations to Kafka
+- **Single:** POST JSON to `/predict` → synchronous, returns prediction immediately
 
-**Model loading:** Model artifacts loaded once at API startup, kept in memory for fast inference.
+**Model loading:** Model artifacts loaded once at startup (API and Airflow workers), kept in memory for fast inference.
 
 ---
 
 ## 5. Component Roles
 
 ### 5.1 Data Ingestion & Storage
-**Responsibility:** Load, validate, and store enriched order data
+**Responsibility:** Load, validate, store, and track enriched order data
 
-**Technology:** Pandas, CSV in-memory cache
-**Key Tasks:**
-- Accept enriched input (CSV upload or Kafka message)
-- Validate schema and handle missing values
-- Simulated field generation (dates, payment status, order status) for Kaggle data
-- Cache in DataFrame for quick access
+**Technology:** Pandas, PostgreSQL, FastAPI
+
+#### Batch (CSV) Workflow
+
+The CSV upload is **asynchronous** — the API returns immediately with a `batch_job_id`, and Airflow processes the data in the background.
+
+```
+POST /predict/batch (CSV file)
+    │
+    ▼
+API: save CSV to disk, create batch_job record in Postgres (status: pending)
+    │  Returns: { batch_job_id: "abc-123" }
+    │
+    ▼
+Trigger Airflow Batch Processing DAG (batch_job_id)
+    │
+    ▼
+Airflow DAG:
+    1. Load CSV by batch_job_id
+    2. Validate schema, handle missing values
+    3. Run unified pipeline (transform → inference → KPI → deviation)
+    4. Store predictions in Postgres (FK → batch_job_id)
+    5. Store deviations in Postgres (FK → prediction_id)
+    6. Critical deviations → publish to Kafka deviation-events
+    7. Update batch_job status: completed
+    │
+    ▼
+Kafka deviation-events → Airflow Agent DAG
+    1. Agent orchestrator runs
+    2. Agent responses stored in Postgres (FK → deviation_id)
+    3. Agent responses also ingested into RAG (Chroma)
+    │
+    ▼
+User queries results:
+    GET /batch/{id}/status           → pending / processing / completed / failed
+    GET /batch/{id}/predictions      → all predictions for this upload
+    GET /batch/{id}/deviations       → all deviations detected
+    GET /batch/{id}/agent-responses  → all agent actions triggered
+```
+
+#### Streaming (Kafka) Workflow — Micro-Batch via Airflow
+
+Airflow 3.x natively supports Kafka consumers as DAG triggers. The **Streaming DAG** runs continuously inside Airflow, consuming from `fulfillment-events` in micro-batches. This eliminates a standalone consumer service and unifies all orchestration in Airflow.
+
+```
+Kafka fulfillment-events topic
+    │
+    ▼
+Airflow Streaming DAG (Kafka consumer trigger):
+    Collect messages until:
+      - 15 seconds elapsed, OR
+      - 1,000 messages buffered
+      (whichever comes first)
+    │
+    ▼
+Process micro-batch in bulk:
+    1. Deserialize all messages into DataFrame
+    2. Run unified pipeline on entire batch (same code as CSV batch)
+    3. Store all predictions in Postgres (source=streaming, batch_job_id=NULL)
+    4. Store all deviations in Postgres (FK → prediction_id)
+    5. Critical deviations → bulk publish to Kafka deviation-events
+    │
+    ▼
+Kafka deviation-events → Airflow Agent DAG (same as batch)
+    │
+    ▼
+Query by order_id, deviation_id, or time range
+```
+
+**Why micro-batch over per-message:**
+- Vectorized inference (model.predict on DataFrame vs one row at a time)
+- Bulk DB inserts (single INSERT with many rows)
+- KPI running averages computed once per micro-batch, not per message
+- Bounded latency: worst-case 15s delay, acceptable for near-real-time use case
+
+#### Common Data Chain
+
+Both batch and streaming produce the same FK chain in Postgres:
+
+```
+batch_jobs (batch only)
+    ↓ batch_job_id
+predictions (order_id, source=batch|streaming, delay_probability)
+    ↓ prediction_id
+deviations (severity, reason, status)
+    ↓ deviation_id
+agent_responses (agent_type, action, details, conversation_history)
+```
+
+- **Batch queries:** filter by `batch_job_id` to get all results for a CSV upload
+- **Streaming queries:** filter by `order_id`, `time range`, or `deviation_id`
 
 ---
 
@@ -274,20 +368,23 @@ Transform / Feature Engineering
 ---
 
 ### 5.3 KPI Calculation Module
-**Responsibility:** Compute operational KPIs from predictions + raw data
+**Responsibility:** Compute operational KPIs from predictions + historical data
 
-**Technology:** Pandas, NumPy
+**Technology:** Pandas, NumPy, PostgreSQL
 **KPIs to Implement:**
 
-| KPI | Source | Definition |
-|-----|--------|------------|
-| **Predicted Delivery Delay** | ML model output | `delay_probability` per order from trained classifier |
-| **Segment Risk Score** | Aggregated predictions | Avg delay probability grouped by `warehouse_block`, `mode_of_shipment`, or `product_importance` |
-| **Fulfillment Gap** | Raw data + prediction | Orders with `order_status = shipped` and high `delay_probability` (shipped but likely to miss window) |
-| **On-Time Delivery Rate** | Aggregated predictions | % of orders with `delay_probability < threshold` per group/period |
-| **High-Risk Order Count** | Prediction threshold | Count of orders exceeding delay probability threshold |
+| KPI | Type | Definition |
+|-----|------|------------|
+| **Predicted Delivery Delay** | Per-order | `delay_probability` from trained classifier (current prediction) |
+| **Segment Risk Score** | Running average (30-day) | Avg delay probability grouped by `warehouse_block`, `mode_of_shipment`, or `product_importance` — rolling 30-day window |
+| **Fulfillment Gap** | Per-order | Orders with `order_status = shipped` and high `delay_probability` (shipped but likely to miss window) |
+| **On-Time Delivery Rate** | Running average (30-day) | % of orders with `delay_probability < threshold` per group — rolling 30-day window |
+| **High-Risk Order Count** | Running count (30-day) | Count of orders exceeding delay probability threshold in last 30 days |
 
-**Output:** KPI DataFrame with scores, groupings, and thresholds
+**Historical Storage (PostgreSQL):**
+Running average KPIs query the `predictions` table with a **30-day rolling window** (`WHERE created_at > NOW() - INTERVAL '30 days'`). This bounds query cost and ensures KPIs reflect recent operational health rather than stale historical patterns. See Section 5.8 for full DB schema.
+
+**Output:** KPI DataFrame with per-order scores + aggregated running metrics
 
 ---
 
@@ -306,15 +403,19 @@ Transform / Feature Engineering
 
 ---
 
-### 5.5 Event Queue / Pub-Sub
-**Responsibility:** Route deviation events to agents
+### 5.5 Kafka Event Routing
+**Responsibility:** Route deviation events from processing pipeline to agent orchestration
 
-**Technology:** Simple in-memory queue (core), Kafka (stretch)
+**Technology:** Kafka (Redpanda — see Tech Stack)
+**Topics:**
+- `fulfillment-events` — Enriched order data from upstream (input)
+- `deviation-events` — Deviations detected by pipeline (triggers agent orchestration)
+
 **Behavior:**
-- Listens for deviation events from detector
-- Queues agent execution requests
-- Ensures no duplicate triggers
-- Logs all events for audit
+- Processing pipeline publishes deviation events to `deviation-events` topic
+- Airflow Agent DAG uses Kafka consumer trigger on `deviation-events` → triggers orchestrator
+- Ensures no duplicate triggers (consumer group + idempotent processing)
+- All events retained for audit and replay
 
 ---
 
@@ -370,8 +471,8 @@ Orchestrator aggregates results → stores decision trail → returns response
 ```
 
 **Trigger Modes:**
-- **Automatic:** Deviation detected (critical severity) → agent fires with no human in the loop
-- **Manual:** User calls `POST /trigger-agent` with order/deviation ID for testing
+- **Automatic:** Deviation published to Kafka → Airflow Agent DAG picks it up → orchestrator fires with no human in the loop
+- **Manual:** User calls `POST /trigger-agent` with order/deviation ID → triggers Airflow agent DAG directly
 
 **Multi-Turn Capability:**
 Each agent can chain multiple reasoning steps:
@@ -498,7 +599,70 @@ Agent Turn 2: "Per policy, partial refund only. Issuing 50% store credit."
 
 ---
 
-### 5.8 REST API Layer
+### 5.8 PostgreSQL Data Models
+**Responsibility:** System of record for all pipeline outputs, audit trail, and batch job tracking
+
+**Technology:** PostgreSQL (shared instance with Airflow metadata, separate schema)
+
+```sql
+-- Tracks CSV batch uploads and their processing status
+batch_jobs (
+    id              UUID PRIMARY KEY,
+    filename        VARCHAR,
+    status          VARCHAR,    -- pending → processing → completed → failed
+    row_count       INTEGER,
+    created_at      TIMESTAMP,
+    completed_at    TIMESTAMP,
+    error_message   TEXT        -- nullable, set on failure
+)
+
+-- Every prediction from both batch and streaming
+predictions (
+    id                  UUID PRIMARY KEY,
+    batch_job_id        UUID REFERENCES batch_jobs(id),  -- NULL for streaming
+    source              VARCHAR,    -- 'batch' | 'streaming'
+    order_id            VARCHAR,
+    delay_probability   FLOAT,
+    severity            VARCHAR,    -- 'critical' | 'warning' | 'info' | 'none'
+    features_json       JSONB,      -- full input features for audit
+    created_at          TIMESTAMP
+)
+
+-- Deviations that breach thresholds
+deviations (
+    id              UUID PRIMARY KEY,
+    prediction_id   UUID REFERENCES predictions(id),
+    batch_job_id    UUID REFERENCES batch_jobs(id),  -- NULL for streaming
+    severity        VARCHAR,    -- 'critical' | 'warning' | 'info'
+    reason          TEXT,
+    status          VARCHAR,    -- 'pending' | 'agent_triggered' | 'resolved'
+    created_at      TIMESTAMP
+)
+
+-- Agent resolution outputs (stored here AND ingested into RAG)
+agent_responses (
+    id                      UUID PRIMARY KEY,
+    deviation_id            UUID REFERENCES deviations(id),
+    agent_type              VARCHAR,    -- 'shipment' | 'customer' | 'payment' | 'escalation'
+    action                  VARCHAR,
+    details_json            JSONB,
+    conversation_history    JSONB,      -- full multi-turn conversation
+    created_at              TIMESTAMP
+)
+```
+
+**Dual storage for agent responses:**
+
+| Store | Purpose | Query pattern |
+|---|---|---|
+| **PostgreSQL** | System of record, structured queries, API responses, dashboard | By ID, batch_job_id, time range, severity, agent type |
+| **RAG (Chroma)** | Semantic knowledge for future agent decisions | "How did we handle a similar delay before?" |
+
+After every agent response is stored in Postgres, it is also embedded and ingested into Chroma as a historical resolution document.
+
+---
+
+### 5.9 REST API Layer
 **Responsibility:** Expose system functionality via HTTP
 **Technology:** FastAPI with Swagger documentation
 **Endpoints:**
@@ -507,31 +671,39 @@ Agent Turn 2: "Per policy, partial refund only. Issuing 50% store credit."
 |----------|--------|---------|
 | `/health` | GET | System health check |
 | `/predict` | POST | Single order prediction (JSON) |
-| `/predict/batch` | POST | Bulk predictions (CSV upload) |
-| `/kpi/compute` | POST | Trigger KPI calculation on dataset |
-| `/kpi/dashboard` | GET | View current KPI values |
-| `/detect-deviation` | POST | Run deviation detection |
-| `/deviations` | GET | List recent deviations |
-| `/trigger-agent` | POST | Manually trigger agent on deviation |
+| `/predict/batch` | POST | Bulk predictions (CSV upload) — async, returns `batch_job_id` |
+| `/batch/{id}/status` | GET | Batch job processing status |
+| `/batch/{id}/predictions` | GET | All predictions for a batch upload |
+| `/batch/{id}/deviations` | GET | All deviations for a batch upload |
+| `/batch/{id}/agent-responses` | GET | All agent actions for a batch upload |
+| `/kpi/dashboard` | GET | Current KPI values (running averages) |
+| `/deviations` | GET | List recent deviations (filterable by severity, time range) |
+| `/trigger-agent` | POST | Manually trigger agent on a deviation |
 | `/agent-response/{id}` | GET | Fetch agent resolution output |
-| `/orders/{id}` | GET | Order status + prediction + KPI details |
+| `/orders/{id}` | GET | Order predictions + deviations + agent actions |
 | `/knowledge/ingest` | POST | Add document to RAG knowledge base |
 | `/knowledge/search` | POST | Query knowledge base (for debugging/admin) |
 
 ---
 
-### 5.9 Streaming Pipeline 
+### 5.10 Streaming Pipeline
 **Responsibility:** Real-time predictions and KPI updates from live data
-**Technology:** Kafka, APScheduler, WebSocket (FastAPI)
+
+**Technology:** Kafka, Airflow 3.x (Kafka triggers)
 **Architecture:**
-- **Kafka Producer Simulator** — Generates enriched order events, publishes to `fulfillment-events` topic
-- **Kafka Consumer** — Reads events → transform → ML inference → deviation check → agent trigger
-- **KPI Streaming** — Aggregated KPIs published to `kpi-updates` topic, pushed to clients via WebSocket
-- **APScheduler** — Periodic KPI recalculation over sliding windows
+- **Kafka Producer Simulator** — Generates enriched order events, publishes to `fulfillment-events` topic at configurable intervals
+- **Airflow Streaming DAG** — Uses Kafka consumer trigger on `fulfillment-events`. Collects micro-batches (15s / 1K max) → calls unified pipeline logic → deviations published to `deviation-events` topic
+- **Airflow Agent DAG** — Uses Kafka consumer trigger on `deviation-events` → triggers agent orchestration asynchronously
+
+**Why Airflow consumers over standalone services:**
+- All consumers managed by one orchestration engine — no separate process supervision
+- Built-in retry, alerting, and dead-letter handling via Airflow
+- DAG visualization shows consumer lag, task durations, and failures
+- Fewer Docker Compose services to maintain
 
 ---
 
-### 5.10 Monitoring Dashboard 
+### 5.11 Monitoring Dashboard 
 **Responsibility:** Visual monitoring and manual intervention interface
 
 **Technology:** Streamlit, Plotly, Pandas
@@ -552,7 +724,7 @@ Agent Turn 2: "Per policy, partial refund only. Issuing 50% store credit."
 
 ---
 
-### 5.11 Logging & Monitoring
+### 5.12 Logging & Monitoring
 **Responsibility:** Audit trail, error tracking, performance metrics
 
 **Technology:** Python logging, structured JSON logs
@@ -576,20 +748,20 @@ Agent Turn 2: "Per policy, partial refund only. Issuing 50% store credit."
 | **ML Serving** | joblib + FastAPI | Lightweight model loading; no separate serving infra needed |
 | **Data Processing** | Pandas, NumPy | Fast, familiar DSL for tabular data; ideal for CSV |
 | **API** | FastAPI | Async, auto-docs (Swagger), lightweight, modern |
+| **Orchestration** | Apache Airflow 3.x | Unified engine for batch processing, streaming consumption, and agent orchestration; native Kafka consumer triggers; DAG visualization; built-in retry/monitoring |
+| **Event Streaming** | Redpanda (Docker) | Kafka API-compatible; single binary (no Zookeeper); C++ for lower resource usage; deviation event routing; streaming pipeline |
+| **Database** | PostgreSQL | Shared with Airflow; stores batch_jobs, predictions, deviations, agent_responses; running average KPIs |
 | **AI Agents** | OpenAI API + LangChain | State-of-the-art LLM capabilities; abstracts prompt logic |
 | **RAG Vector DB** | Chroma | Lightweight, in-process, persisted to disk; no external service needed |
 | **RAG Embeddings** | OpenAI text-embedding-3-small | High-quality semantic search; same API key as agents |
-| **Containerization** | Docker + Docker Compose | Cloud-native, reproducible environments |
+| **Containerization** | Docker + Docker Compose | Cloud-native; runs all dependencies (Kafka, Airflow, API) |
 | **Notebook** | Jupyter | Standard for EDA and ML experimentation |
 | **Testing** | pytest | Comprehensive, fixtures, plugin ecosystem |
 
 ### Stretch Goal Stack
 | Component | Technology | Justification |
 |-----------|-----------|---------------|
-| **Streaming** | Kafka (Docker) | Distributed event streaming; industry standard |
-| **Real-time Push** | FastAPI WebSocket | Native async support; lightweight real-time |
-| **Dashboard** | Streamlit + Plotly | Rapid development; interactive visualizations |
-| **Scheduler** | APScheduler | Lightweight; periodic KPI recalculation |
+| **Dashboard** | Streamlit + Plotly | Rapid development; interactive visualizations; queries KPI data from Postgres via API |
 
 ---
 
@@ -618,14 +790,20 @@ uvicorn src.api:app --reload
 pytest tests/
 ```
 
-### 7.2 Docker Deployment
+### 7.2 Docker Compose Services
 ```bash
-# Full stack (API + Kafka + Streamlit)
 docker-compose up -d
-
-# API only
-docker-compose up api
 ```
+
+| Service | Image/Build | Ports | Purpose |
+|---------|-------------|-------|---------|
+| `api` | Custom (FastAPI) | 8000 | REST API + model serving |
+| `redpanda` | docker.redpanda.com/redpandadata/redpanda | 9092, 8081 | Event streaming (fulfillment-events, deviation-events). Kafka API-compatible, no Zookeeper needed |
+| `airflow-webserver` | apache/airflow | 8080 | Airflow UI (DAG monitoring) |
+| `airflow-scheduler` | apache/airflow | — | DAG scheduling + execution |
+| `postgres` | postgres | 5432 | Shared DB: Airflow metadata + application data (batch_jobs, predictions, deviations, agent_responses) |
+| `stream-producer` | Custom | — | Simulator (generates enriched order events to Kafka) |
+| `streamlit` | Custom | 8501 | Monitoring dashboard (stretch) |
 
 ### 7.3 Production Considerations
 - Environment-based config (`.env` files)
@@ -644,7 +822,7 @@ docker-compose up api
 3. **Simulated Agent Tools** - Agent tools (reschedule, refund, email) execute simulated business logic, not real integrations
 4. **Real RAG Workflow** - Policy documents are real (shipped in repo), embeddings are real (OpenAI API), retrieval is real (Chroma similarity search)
 5. **No Authentication** - Open API for demo (add OAuth in production)
-6. **Kafka via Docker** - Kafka cluster runs in Docker Compose for streaming features
+6. **Kafka via Docker** - Kafka streaming runs via Redpanda in Docker Compose (Kafka API-compatible, no Zookeeper)
 
 ### Limitations
 1. **Model Accuracy** - Bounded by Kaggle dataset quality and feature set
@@ -661,23 +839,69 @@ docker-compose up api
 ### Core Features (MVP)
 - ML model training notebook (EDA + training + evaluation + export)
 - Data ingestion with enriched schema + transform layer
-- ML inference serving (batch CSV + single prediction)
-- KPI calculation from predictions + raw data
+- Unified processing pipeline (transform → inference → KPI → deviation) as single job
+- ML inference serving (batch CSV + single prediction + streaming)
+- PostgreSQL data models (batch_jobs, predictions, deviations, agent_responses)
+- KPI calculation with running averages (PostgreSQL historical queries)
 - Deviation detection (ML threshold + rule-based)
+- Kafka event routing (fulfillment-events, deviation-events)
+- Kafka producer simulator (generates enriched order events)
+- Airflow orchestration — 3 DAGs: batch processing, streaming consumer (micro-batch), agent orchestration
 - Multi-agent orchestrator with LLM-based routing (shipment, customer, payment, escalation)
 - Agent tools with simulated business logic
 - RAG knowledge base (real ingestion + retrieval with Chroma + OpenAI Embeddings)
 - Policy documents + historical resolution ingestion
 - REST API (FastAPI)
-- Docker setup
+- Docker Compose setup (all services)
 
 ### Stretch Goals
-- Kafka streaming pipeline (producer simulator + consumer + live inference)
-- Streaming KPI updates (Kafka + WebSocket)
-- Streamlit monitoring dashboard
+- Streamlit monitoring dashboard (queries Postgres via API)
 
 ### Future Extensions (v2+)
 - Per-segment ML models
 - Email/SMS integration for customer communication
 - Resilience, fault tolerance, and scalability
+
+---
+
+## 10. Design Decisions
+
+### Unified Processing Pipeline
+- **Why single job:** Transform → Inference → KPI → Deviation as one atomic unit avoids intermediate state management, reduces latency, ensures consistency between prediction and KPI computation
+- **Why shared code for batch + streaming:** Same pipeline logic called by Airflow Batch DAG and Airflow Streaming DAG — no drift between paths, both managed by the same orchestration engine
+
+### Airflow 3.x as Unified Orchestration Engine
+- **Why Airflow over custom async:** Provides DAG visualization, built-in retry/alerting, task dependency management — valuable for both demo and production
+- **Why Airflow consumers (not standalone):** Airflow 3.x natively supports Kafka consumer triggers — eliminates standalone consumer services, centralizes all orchestration, provides built-in monitoring for consumer lag and failures
+- **3 DAGs:**
+  - **Batch Processing DAG** — Triggered by API upload → runs unified pipeline
+  - **Streaming DAG** — Kafka consumer trigger on `fulfillment-events` → micro-batch processing → unified pipeline
+  - **Agent Orchestration DAG** — Kafka consumer trigger on `deviation-events` → agent orchestrator
+- **Replaces APScheduler + standalone consumers:** Airflow handles all scheduling, consumption, and orchestration in one place
+
+### Kafka as Central Event Bus
+- **Why Redpanda as Kafka implementation:** Kafka API-compatible (same client libraries, same protocol) but single C++ binary — no Zookeeper, no JVM, ~10x lower memory footprint. Simpler Docker Compose setup (1 container vs 2). Production-grade with built-in Schema Registry and HTTP Proxy. All standard Kafka client code works unchanged.
+- **Why event bus for deviation routing:** Decouples detection from resolution; deviation events are durable and replayable; Airflow agent DAGs consume asynchronously
+- **2 topics:** `fulfillment-events` (input), `deviation-events` (pipeline → agents)
+- **Why not in-memory queue:** Kafka provides persistence, replay, consumer groups, and scales to production workloads
+
+### PostgreSQL as System of Record
+- **Why PostgreSQL over SQLite:** Already required for Airflow metadata — sharing the instance eliminates an extra dependency; PostgreSQL supports concurrent access from API and Airflow workers
+- **Why structured DB models:** Clean FK chain (batch_jobs → predictions → deviations → agent_responses) enables querying results by batch upload, order, time range, or severity
+- **Dual store pattern:** Agent responses go to Postgres (structured queries, audit) AND Chroma (semantic retrieval for future agents) — each store serves a different access pattern
+- **Running average KPIs:** Query `predictions` table for cumulative metrics rather than point-in-time; ensures KPIs reflect full operational history
+
+### ML Model
+- **Why Classification over Heuristics:** Dataset has labeled target variable; trained model gives calibrated probabilities for threshold-based decisions
+- **Why joblib over ONNX/MLflow:** Simplicity for demo; joblib is zero-config for scikit-learn/XGBoost
+
+### Multi-Agent System
+- **Why Multi-Agent over Single Agent:** Prompt specialization, tool isolation, clean audit trails, independent iteration
+- **Why LLM-based Routing:** Orchestrator LLM analyzes deviation context and decides which specialist(s) to invoke via function calling — more flexible than static rules
+
+### RAG Knowledge Base
+- **Why Real RAG (not simulated):** Demonstrates a production-grade knowledge pipeline; same workflow at 10 or 10,000 documents
+- **Why Chroma:** In-process, persists to disk, zero external dependencies
+- **3 Ingestion Paths:** Static policies at startup + historical resolutions at runtime + admin API for live updates
+- **2 Query Modes:** Pre-execution retrieval (automatic) + mid-execution tool (agent-initiated)
 

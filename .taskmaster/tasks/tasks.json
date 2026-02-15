@@ -1,0 +1,1574 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": "1",
+        "title": "Implement project configuration module",
+        "description": "Create centralized configuration loading from environment variables and .env files for database URLs, Kafka brokers, model paths, API keys, and thresholds",
+        "details": "Implement src/config/settings.py using Pydantic Settings class. Load DATABASE_URL, KAFKA_BROKER, OPENAI_API_KEY, MODEL_PATH, threshold values from environment variables with sensible defaults. Validate required keys exist and provide typed accessors. Support .env file loading with python-dotenv.",
+        "testStrategy": "Unit test config loading with environment variable overrides, test missing required variables raise clear errors, verify default values are applied correctly",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set up project structure and dependencies",
+            "description": "Create the basic project structure with src/config directory and install required dependencies",
+            "dependencies": [],
+            "details": "Create src/config/ directory structure. Install pydantic, python-dotenv packages. Set up __init__.py files for proper module imports.",
+            "status": "pending",
+            "testStrategy": "Verify directory structure exists and packages are importable",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Define configuration schema with Pydantic BaseSettings",
+            "description": "Create the Pydantic Settings class with all required configuration fields and their types",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement Settings class inheriting from BaseSettings with fields: DATABASE_URL (str), KAFKA_BROKER (str), OPENAI_API_KEY (str), MODEL_PATH (Path), threshold values (float). Define field validators and default values where appropriate.",
+            "status": "pending",
+            "testStrategy": "Unit test field validation, type checking, and default value assignment",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement environment variable loading with .env support",
+            "description": "Add .env file loading capability and environment variable resolution with proper precedence",
+            "dependencies": [
+              2
+            ],
+            "details": "Configure python-dotenv integration in Settings class. Implement env_file parameter and environment variable prefix. Ensure environment variables override .env file values with proper precedence handling.",
+            "status": "pending",
+            "testStrategy": "Test .env file loading, environment variable override behavior, and precedence rules",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Add configuration validation and error handling",
+            "description": "Implement validation for required configuration keys and provide clear error messages for missing values",
+            "dependencies": [
+              3
+            ],
+            "details": "Add field validators for required keys like DATABASE_URL, KAFKA_BROKER, OPENAI_API_KEY. Implement custom validation methods to check URL formats, file path existence for MODEL_PATH. Provide descriptive error messages for validation failures.",
+            "status": "pending",
+            "testStrategy": "Test missing required variables raise ValidationError with clear messages, test invalid URL/path formats are caught",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Create configuration singleton and typed accessors",
+            "description": "Implement singleton pattern for configuration access and provide typed accessor methods throughout the application",
+            "dependencies": [
+              4
+            ],
+            "details": "Create get_settings() function returning cached Settings instance. Implement typed accessor methods for different configuration categories (database, kafka, ai, model). Export settings instance for easy import across modules.",
+            "status": "pending",
+            "testStrategy": "Test singleton behavior ensures same instance returned, verify typed accessors return correct types, test configuration reloading scenarios",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 4,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Break down the configuration module implementation into: 1) Project structure setup and dependency installation, 2) Pydantic Settings class definition with field validation, 3) Environment variable loading with .env file support, 4) Configuration validation and error handling, 5) Singleton pattern implementation with typed accessors. Each subtask should focus on a specific aspect of configuration management."
+      },
+      {
+        "id": "2",
+        "title": "Implement structured logging module",
+        "description": "Create JSON-structured logging utility used across all modules for consistent audit trails with correlation ID support",
+        "details": "Implement src/logging/logger.py with JSON formatter. Include timestamp, module name, level, and structured context fields. Support correlation IDs for request tracing. Use Python's logging module with custom formatter for structured output to stdout.",
+        "testStrategy": "Unit test log format structure, context injection functionality, log level filtering, correlation ID propagation",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create base logger configuration and JSON formatter",
+            "description": "Implement the core logging infrastructure with JSON formatting capabilities",
+            "dependencies": [],
+            "details": "Create src/logging/logger.py with custom JSONFormatter class extending Python's logging.Formatter. Implement format() method to output structured JSON with timestamp, module name, log level, and message fields. Configure base logger with appropriate handlers for stdout output.",
+            "status": "pending",
+            "testStrategy": "Unit test JSON format structure validation, verify all required fields are present in output, test different log levels produce correct JSON structure",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement correlation ID support and context injection",
+            "description": "Add correlation ID tracking and structured context field support to the logging system",
+            "dependencies": [
+              1
+            ],
+            "details": "Extend JSONFormatter to support correlation IDs for request tracing. Implement context injection mechanism allowing structured data to be added to log entries. Create correlation ID propagation utilities and context managers for maintaining correlation across function calls.",
+            "status": "pending",
+            "testStrategy": "Test correlation ID propagation across multiple log entries, verify context injection adds structured fields correctly, test context isolation between concurrent requests",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Create logger factory and configuration management",
+            "description": "Implement factory pattern for creating configured loggers with consistent settings",
+            "dependencies": [
+              2
+            ],
+            "details": "Create get_logger() factory function that returns properly configured logger instances with JSON formatting. Implement configuration management for log levels, output destinations, and formatting options. Support module-specific logger creation with automatic module name detection.",
+            "status": "pending",
+            "testStrategy": "Test logger factory creates consistent logger instances, verify module name auto-detection works correctly, test configuration changes apply to new logger instances",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Implement log level filtering and handler configuration",
+            "description": "Add configurable log level filtering and multiple output handler support",
+            "dependencies": [
+              3
+            ],
+            "details": "Implement log level filtering mechanisms with environment-based configuration. Add support for multiple handlers (stdout, file, etc.) with different log levels. Create handler configuration utilities and ensure proper log level inheritance and filtering behavior.",
+            "status": "pending",
+            "testStrategy": "Test log level filtering works correctly for different levels, verify multiple handlers receive appropriate log entries, test environment-based configuration changes",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Add integration utilities and documentation",
+            "description": "Create integration helpers and comprehensive documentation for the logging module",
+            "dependencies": [
+              4
+            ],
+            "details": "Implement FastAPI middleware for automatic correlation ID injection, create Airflow logging integration utilities, and add comprehensive documentation with usage examples. Include performance considerations and best practices for structured logging across the application.",
+            "status": "pending",
+            "testStrategy": "Test FastAPI middleware correctly injects correlation IDs, verify Airflow integration works with DAG tasks, validate documentation examples work as expected",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 5,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Divide the logging implementation into: 1) Base logger configuration with JSON formatter, 2) Correlation ID support and context injection mechanisms, 3) Logger factory with configuration management, 4) Log level filtering and handler configuration, 5) Integration utilities and documentation. Focus on structured output and correlation tracking."
+      },
+      {
+        "id": "3",
+        "title": "Implement PostgreSQL ORM models",
+        "description": "Create SQLAlchemy ORM models for batch_jobs, predictions, deviations, and agent_responses tables with proper FK chain",
+        "details": "Implement src/db/models.py with SQLAlchemy models: BatchJob (id UUID PK, filename, status, row_count, created_at, completed_at, error_message), Prediction (id UUID PK, batch_job_id FK, source, order_id, delay_probability, severity, features_json JSONB, created_at), Deviation (id UUID PK, prediction_id FK, batch_job_id FK, severity, reason, status, created_at), AgentResponse (id UUID PK, deviation_id FK, agent_type, action, details_json JSONB, conversation_history JSONB, created_at). Include proper indexes and constraints.",
+        "testStrategy": "Unit test model creation, FK constraints validation, test with in-memory SQLite database, verify column types and indexes",
+        "priority": "high",
+        "dependencies": [
+          "1"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create BatchJob SQLAlchemy model",
+            "description": "Implement the BatchJob ORM model with all required fields and constraints",
+            "dependencies": [],
+            "details": "Create BatchJob model in src/db/models.py with UUID primary key, filename (String), status (Enum), row_count (Integer), created_at (DateTime), completed_at (DateTime nullable), error_message (Text nullable). Add proper table name and constraints.",
+            "status": "pending",
+            "testStrategy": "Unit test model instantiation, field validation, and constraint enforcement",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Create Prediction SQLAlchemy model with BatchJob FK",
+            "description": "Implement the Prediction ORM model with foreign key relationship to BatchJob",
+            "dependencies": [
+              1
+            ],
+            "details": "Create Prediction model with UUID primary key, batch_job_id foreign key to BatchJob, source (String), order_id (String), delay_probability (Float), severity (String), features_json (JSONB), created_at (DateTime). Define relationship with BatchJob model.",
+            "status": "pending",
+            "testStrategy": "Test foreign key constraint, relationship loading, and JSONB field functionality",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Create Deviation SQLAlchemy model with dual FK relationships",
+            "description": "Implement the Deviation ORM model with foreign keys to both Prediction and BatchJob",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Create Deviation model with UUID primary key, prediction_id FK to Prediction, batch_job_id FK to BatchJob, severity (String), reason (Text), status (String), created_at (DateTime). Define relationships with both parent models and ensure FK chain integrity.",
+            "status": "pending",
+            "testStrategy": "Test dual foreign key constraints, verify cascade behavior, test relationship loading",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Create AgentResponse SQLAlchemy model with Deviation FK",
+            "description": "Implement the AgentResponse ORM model with foreign key relationship to Deviation",
+            "dependencies": [
+              3
+            ],
+            "details": "Create AgentResponse model with UUID primary key, deviation_id FK to Deviation, agent_type (String), action (String), details_json (JSONB), conversation_history (JSONB), created_at (DateTime). Define relationship with Deviation model.",
+            "status": "pending",
+            "testStrategy": "Test foreign key constraint to Deviation, validate JSONB fields, test relationship traversal",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Add database indexes and finalize model configuration",
+            "description": "Add proper database indexes for performance and configure SQLAlchemy model metadata",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Add indexes on foreign key columns (batch_job_id, prediction_id, deviation_id), created_at timestamps, and frequently queried fields like status. Configure SQLAlchemy Base metadata, table naming conventions, and ensure all models are properly registered.",
+            "status": "pending",
+            "testStrategy": "Test index creation, verify query performance improvements, test model registration and metadata generation",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 6,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Structure the ORM implementation as: 1) BatchJob model with UUID primary key and status tracking, 2) Prediction model with BatchJob foreign key relationship, 3) Deviation model with dual FK relationships to Prediction and BatchJob, 4) AgentResponse model with Deviation FK, 5) Database indexes and model configuration finalization. Ensure proper FK chain integrity."
+      },
+      {
+        "id": "4",
+        "title": "Implement database session management",
+        "description": "Create async session factory for FastAPI and sync session for Airflow with connection pool configuration",
+        "details": "Implement src/db/session.py with async session factory using asyncpg for FastAPI endpoints and sync session factory for Airflow tasks. Configure connection pooling with proper timeout and retry settings. Provide dependency injection patterns for FastAPI.",
+        "testStrategy": "Integration test session creation, connection pooling behavior, test both async and sync session factories",
+        "priority": "high",
+        "dependencies": [
+          "1",
+          "3"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create database configuration management",
+            "description": "Implement database configuration settings and environment variable handling for both async and sync connections",
+            "dependencies": [],
+            "details": "Create configuration classes for database connection parameters including host, port, database name, username, password, pool settings (min/max connections, timeout, retry settings). Support environment variable overrides and separate configs for FastAPI (async) and Airflow (sync) usage patterns.",
+            "status": "pending",
+            "testStrategy": "Unit test configuration loading from environment variables, test default values, verify separate async/sync configurations",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement async session factory for FastAPI",
+            "description": "Create async SQLAlchemy session factory using asyncpg driver with connection pooling for FastAPI endpoints",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement async session factory using SQLAlchemy async engine with asyncpg driver. Configure async connection pool with proper min/max connections, pool timeout, and retry logic. Include session lifecycle management with proper cleanup and error handling for FastAPI usage.",
+            "status": "pending",
+            "testStrategy": "Test async session creation and cleanup, verify connection pooling behavior, test concurrent session usage, verify asyncpg driver integration",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement sync session factory for Airflow",
+            "description": "Create synchronous SQLAlchemy session factory with connection pooling optimized for Airflow task execution",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement sync session factory using standard SQLAlchemy engine with psycopg2 driver. Configure sync connection pool suitable for Airflow's task-based execution model with appropriate timeout and retry settings. Include proper session management for long-running batch operations.",
+            "status": "pending",
+            "testStrategy": "Test sync session creation and cleanup, verify connection pool configuration, test session behavior in batch processing scenarios, verify psycopg2 driver integration",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Create FastAPI dependency injection patterns",
+            "description": "Implement dependency injection functions for FastAPI to provide database sessions to route handlers",
+            "dependencies": [
+              2
+            ],
+            "details": "Create FastAPI dependency functions using Depends() pattern for injecting async database sessions into route handlers. Implement proper session lifecycle management with automatic cleanup, error handling, and transaction management. Include context manager patterns for session scope control.",
+            "status": "pending",
+            "testStrategy": "Test dependency injection in FastAPI routes, verify session cleanup after requests, test error handling and rollback scenarios, verify transaction boundaries",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Integrate session factories and add comprehensive testing",
+            "description": "Combine async and sync session factories into unified session.py module with comprehensive integration testing",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Integrate both async and sync session factories into src/db/session.py with clear separation of concerns. Add comprehensive integration tests covering session creation, connection pooling behavior, concurrent access patterns, and proper cleanup. Include performance testing for connection pool efficiency.",
+            "status": "pending",
+            "testStrategy": "Integration test both session factories, test connection pooling under load, verify no connection leaks, test concurrent session usage, benchmark connection pool performance",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 7,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Break down session management into: 1) Database configuration management for async/sync connections, 2) Async session factory with asyncpg for FastAPI, 3) Sync session factory with psycopg2 for Airflow, 4) FastAPI dependency injection patterns, 5) Integration testing and performance optimization. Handle both async and sync paradigms."
+      },
+      {
+        "id": "5",
+        "title": "Download and prepare Kaggle dataset",
+        "description": "Download the Customer Analytics Kaggle dataset and place it in the data/raw directory for model training",
+        "details": "Download ecommerce_shipping.csv from Kaggle Customer Analytics dataset (10,999 rows, 12 columns). Place in data/raw/ directory. Verify data integrity and column structure matches expected schema for model training.",
+        "testStrategy": "Verify file existence, validate row count (10,999), verify column names match expected schema, check for data quality issues",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set up Kaggle API credentials and authentication",
+            "description": "Configure Kaggle API credentials to enable programmatic dataset downloads",
+            "dependencies": [],
+            "details": "Install kaggle package, set up kaggle.json credentials file in ~/.kaggle/ directory with proper permissions (600). Verify authentication works by testing API connection to Kaggle services.",
+            "status": "pending",
+            "testStrategy": "Test API authentication by running kaggle datasets list command, verify credentials file exists with correct permissions",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Create data directory structure",
+            "description": "Set up the required directory structure for storing raw and processed datasets",
+            "dependencies": [],
+            "details": "Create data/raw/ directory structure in project root. Ensure proper permissions are set for write access. Add .gitkeep files to maintain directory structure in version control.",
+            "status": "pending",
+            "testStrategy": "Verify data/raw/ directory exists and is writable, check directory structure matches expected layout",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Download ecommerce_shipping.csv from Kaggle",
+            "description": "Download the Customer Analytics dataset file from Kaggle using the API",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Use Kaggle API to download the Customer Analytics dataset containing ecommerce_shipping.csv. Handle download errors and retry logic. Save file to data/raw/ directory with original filename.",
+            "status": "pending",
+            "testStrategy": "Verify file downloaded successfully to data/raw/ecommerce_shipping.csv, check file size is reasonable (not empty or corrupted)",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Validate dataset structure and integrity",
+            "description": "Verify the downloaded dataset matches expected schema and data quality requirements",
+            "dependencies": [
+              3
+            ],
+            "details": "Load ecommerce_shipping.csv and verify it contains exactly 10,999 rows and 12 columns. Check column names match expected schema. Validate data types and identify any missing values or data quality issues.",
+            "status": "pending",
+            "testStrategy": "Assert row count equals 10,999, verify column count equals 12, validate column names match expected schema, check for data quality issues like null values or invalid data types",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Create dataset preparation documentation",
+            "description": "Document the dataset preparation process and create data dictionary for future reference",
+            "dependencies": [
+              4
+            ],
+            "details": "Create README.md in data/raw/ directory documenting dataset source, download process, schema details, and any data quality findings. Include column descriptions and data types for reference by downstream tasks.",
+            "status": "pending",
+            "testStrategy": "Verify README.md exists in data/raw/ directory, contains dataset metadata, schema documentation, and preparation steps",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 3,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Organize dataset preparation as: 1) Kaggle API credentials setup and authentication, 2) Data directory structure creation, 3) Dataset download from Kaggle using API, 4) Dataset structure and integrity validation, 5) Documentation creation with data dictionary. Focus on data quality verification.",
+        "updatedAt": "2026-02-15T17:08:16.261Z"
+      },
+      {
+        "id": "6",
+        "title": "Implement ML model training notebook",
+        "description": "Create Jupyter notebook for EDA, feature engineering, model training, and evaluation with export of model artifacts",
+        "details": "Implement notebooks/model_training.ipynb with: 1) EDA section with distribution plots, correlation heatmap, class balance analysis, 2) Feature engineering pipeline with categorical encoding for 10 features, 3) Model training comparing LogisticRegression, RandomForest, XGBoost, LightGBM using 5-fold CV, 4) Model evaluation with confusion matrix, ROC curve, classification report, 5) Export delay_classifier.joblib, preprocessor.joblib, model_metadata.json to models/ directory.",
+        "testStrategy": "Notebook runs end-to-end without errors, best model achieves ROC-AUC >= 0.65, all artifact files are created and loadable, metadata JSON contains expected metrics",
+        "priority": "high",
+        "dependencies": [
+          "5"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement EDA section with data visualization",
+            "description": "Create exploratory data analysis section with distribution plots, correlation heatmap, and class balance analysis",
+            "dependencies": [],
+            "details": "Implement EDA section in notebooks/model_training.ipynb with: distribution plots for numerical features, correlation heatmap showing feature relationships, class balance analysis for target variable, missing value analysis, and statistical summaries. Use matplotlib/seaborn for visualizations.",
+            "status": "pending",
+            "testStrategy": "Verify all plots render correctly, correlation matrix shows expected relationships, class balance percentages are displayed",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Build feature engineering pipeline with categorical encoding",
+            "description": "Create preprocessing pipeline with categorical encoding for 10 model features",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement feature engineering pipeline using sklearn Pipeline with categorical encoding (OneHotEncoder/LabelEncoder) for categorical features, numerical scaling for continuous features, and proper handling of missing values. Pipeline should transform raw data into 10 model-ready features.",
+            "status": "pending",
+            "testStrategy": "Test pipeline transforms data correctly, verify 10 output features, test with missing values, verify categorical encoding works properly",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement model training with algorithm comparison",
+            "description": "Train and compare LogisticRegression, RandomForest, XGBoost, LightGBM using 5-fold cross-validation",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement model training section comparing 4 algorithms (LogisticRegression, RandomForest, XGBoost, LightGBM) using 5-fold cross-validation. Use GridSearchCV or RandomizedSearchCV for hyperparameter tuning. Track training metrics and select best performing model based on ROC-AUC score.",
+            "status": "pending",
+            "testStrategy": "Verify all 4 models train successfully, 5-fold CV executed properly, best model selected based on ROC-AUC, hyperparameter tuning completed",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Create comprehensive model evaluation section",
+            "description": "Generate model evaluation metrics including confusion matrix, ROC curve, and classification report",
+            "dependencies": [
+              3
+            ],
+            "details": "Implement model evaluation section with confusion matrix visualization, ROC curve plotting with AUC score, detailed classification report with precision/recall/F1 scores, feature importance analysis, and performance comparison table across all trained models.",
+            "status": "pending",
+            "testStrategy": "Verify confusion matrix displays correctly, ROC curve shows AUC >= 0.65, classification report includes all metrics, feature importance plot generated",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Export model artifacts to models directory",
+            "description": "Save trained model, preprocessor, and metadata to models/ directory as joblib and JSON files",
+            "dependencies": [
+              4
+            ],
+            "details": "Export best performing model as delay_classifier.joblib, feature preprocessing pipeline as preprocessor.joblib, and model metadata as model_metadata.json to models/ directory. Metadata should include model type, performance metrics, feature names, training timestamp, and hyperparameters.",
+            "status": "pending",
+            "testStrategy": "Verify all 3 files created in models/ directory, joblib files are loadable, metadata JSON contains expected fields and metrics, files can be imported successfully",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 8,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Structure the ML notebook into: 1) EDA section with comprehensive data visualization, 2) Feature engineering pipeline with categorical encoding, 3) Model training and algorithm comparison with cross-validation, 4) Model evaluation with multiple metrics and visualizations, 5) Model artifact export with metadata. Ensure reproducible ML workflow."
+      },
+      {
+        "id": "7",
+        "title": "Implement ML model loading and inference",
+        "description": "Create model loading utilities and single/batch prediction functions for the trained delay classifier",
+        "details": "Implement src/ml/model_loader.py to load delay_classifier.joblib and preprocessor.joblib into memory with validation. Implement src/ml/inference.py with predict_single() accepting order dict and returning {delay_probability, severity, order_id} and predict_batch() for DataFrame input with vectorized inference. Apply severity thresholds: critical>0.7, warning>0.5, info>0.3.",
+        "testStrategy": "Unit test model loading with valid/invalid paths, test single prediction with known inputs, verify probability range [0,1], test batch prediction with various DataFrame sizes, verify severity classification",
+        "priority": "high",
+        "dependencies": [
+          "1",
+          "2",
+          "6"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement model_loader.py with model loading utilities",
+            "description": "Create src/ml/model_loader.py to load delay_classifier.joblib and preprocessor.joblib into memory with validation",
+            "dependencies": [],
+            "details": "Implement ModelLoader class with load_model() and load_preprocessor() methods. Add file existence validation, model format verification, and error handling for corrupted files. Include memory caching to avoid reloading models on each request.",
+            "status": "pending",
+            "testStrategy": "Unit test model loading with valid/invalid paths, test error handling for corrupted files, verify models loaded correctly into memory",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement single prediction function in inference.py",
+            "description": "Create predict_single() function accepting order dictionary and returning prediction with severity classification",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement predict_single() in src/ml/inference.py accepting order dict input and returning {delay_probability, severity, order_id}. Apply loaded preprocessor transform, run model inference, and classify severity using thresholds: critical>0.7, warning>0.5, info>0.3.",
+            "status": "pending",
+            "testStrategy": "Test single prediction with known inputs, verify probability range [0,1], test severity classification thresholds, verify output format matches expected schema",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement batch prediction function in inference.py",
+            "description": "Create predict_batch() function for DataFrame input with vectorized inference capabilities",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Implement predict_batch() in src/ml/inference.py accepting pandas DataFrame input and returning DataFrame with predictions. Use vectorized operations for efficient batch processing, apply preprocessor transform to entire batch, and include severity classification for all predictions.",
+            "status": "pending",
+            "testStrategy": "Test batch prediction with various DataFrame sizes, verify vectorized processing performance, test with empty and single-row DataFrames, verify output DataFrame structure",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Add model validation and error handling",
+            "description": "Implement comprehensive validation for loaded models and robust error handling for inference operations",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Add model compatibility validation, input data validation for both single and batch predictions, graceful error handling for prediction failures, and logging for debugging. Include checks for required features and data types.",
+            "status": "pending",
+            "testStrategy": "Test with invalid model files, test with malformed input data, verify error messages are informative, test logging functionality, verify graceful degradation on errors",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Create inference module integration and optimization",
+            "description": "Integrate model loading with inference functions and optimize for production performance",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Create unified inference module interface, implement model lazy loading, add performance monitoring, optimize memory usage for batch processing, and create configuration management for model paths and thresholds. Include module-level initialization and cleanup.",
+            "status": "pending",
+            "testStrategy": "Integration test full inference pipeline, performance test with large batches, test memory usage patterns, verify configuration loading, test module initialization and cleanup",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 6,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Divide inference implementation into: 1) Model loader utilities with validation and caching, 2) Single prediction function with severity classification, 3) Batch prediction with vectorized operations, 4) Model validation and comprehensive error handling, 5) Integration and performance optimization. Focus on production readiness."
+      },
+      {
+        "id": "8",
+        "title": "Implement data ingestion and schema validation",
+        "description": "Create CSV upload handler and schema validation for the 18-field enriched order data format",
+        "details": "Implement src/ingestion/csv_handler.py for CSV file upload, saving to data/uploads/{batch_job_id}.csv, and creating batch_jobs records. Implement src/ingestion/schema_validator.py to validate 18-field enriched schema with required fields (order_id, warehouse_block, mode_of_shipment, customer_care_calls, customer_rating, cost_of_product, prior_purchases, product_importance, gender, discount_offered, weight_in_gms) and nullable fields (ship_date, delivery_date). Return detailed error lists for invalid rows.",
+        "testStrategy": "Test CSV upload and file save, verify batch_jobs record creation, test schema validation with valid/invalid data, test missing fields and wrong types, verify nullable field handling",
+        "priority": "medium",
+        "dependencies": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement CSV file upload handler",
+            "description": "Create CSV upload functionality that accepts file uploads and saves them to the data/uploads directory",
+            "dependencies": [],
+            "details": "Implement src/ingestion/csv_handler.py with upload_csv() function that accepts file uploads, generates batch_job_id UUID, saves CSV to data/uploads/{batch_job_id}.csv, and handles file I/O errors gracefully",
+            "status": "pending",
+            "testStrategy": "Test file upload with valid CSV, verify file saved to correct location, test error handling for invalid files and I/O errors",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement batch job record creation",
+            "description": "Create database records for batch jobs when CSV files are uploaded",
+            "dependencies": [
+              1
+            ],
+            "details": "Extend csv_handler.py to create BatchJob records in database with filename, status='processing', row_count from CSV, created_at timestamp. Use database session to insert records and handle transaction errors",
+            "status": "pending",
+            "testStrategy": "Verify BatchJob record created with correct fields, test database transaction handling, verify row_count calculation from CSV",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement 18-field schema definition",
+            "description": "Define the complete schema structure for the enriched order data format",
+            "dependencies": [],
+            "details": "Create src/ingestion/schema_validator.py with ENRICHED_SCHEMA constant defining all 18 fields with types and constraints. Include required fields (order_id, warehouse_block, mode_of_shipment, customer_care_calls, customer_rating, cost_of_product, prior_purchases, product_importance, gender, discount_offered, weight_in_gms) and nullable fields (ship_date, delivery_date)",
+            "status": "pending",
+            "testStrategy": "Verify schema contains exactly 18 fields, test required vs nullable field definitions, validate field type specifications",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Implement row-level validation logic",
+            "description": "Create validation functions to check individual CSV rows against the schema",
+            "dependencies": [
+              3
+            ],
+            "details": "Implement validate_row() function in schema_validator.py that checks each row against ENRICHED_SCHEMA, validates data types, required field presence, and value constraints. Return validation result with specific error details for each field violation",
+            "status": "pending",
+            "testStrategy": "Test with valid rows, test missing required fields, test invalid data types, test constraint violations, verify detailed error messages",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Implement batch validation with error reporting",
+            "description": "Create comprehensive validation for entire CSV files with detailed error reporting",
+            "dependencies": [
+              4
+            ],
+            "details": "Implement validate_csv() function that processes entire CSV file, validates each row using validate_row(), collects all errors with row numbers and field details, and returns comprehensive validation report with error summary and detailed error list for invalid rows",
+            "status": "pending",
+            "testStrategy": "Test with mixed valid/invalid CSV data, verify all errors captured with correct row numbers, test error summary generation, verify performance with large CSV files",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 5,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Structure data ingestion as: 1) CSV file upload handler with file I/O management, 2) Batch job record creation in database, 3) 18-field schema definition with constraints, 4) Row-level validation logic with detailed error reporting, 5) Batch validation with comprehensive error collection. Ensure robust error handling."
+      },
+      {
+        "id": "9",
+        "title": "Implement feature engineering pipeline",
+        "description": "Create feature extraction from 18-field enriched schema to 10 model features using the trained preprocessor",
+        "details": "Implement src/features/transform.py to extract 10 model features (warehouse_block, mode_of_shipment, customer_care_calls, customer_rating, cost_of_product, prior_purchases, product_importance, gender, discount_offered, weight_in_gms) from 18-field enriched input. Apply loaded preprocessor.joblib transform and pass through raw fields for KPI calculations.",
+        "testStrategy": "Test with valid enriched data, verify output has exactly 10 features, verify preprocessor transform applied correctly, verify raw fields are preserved for downstream use",
+        "priority": "medium",
+        "dependencies": [
+          "1",
+          "2",
+          "6"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create feature extraction function",
+            "description": "Implement function to extract 10 specific model features from 18-field enriched input schema",
+            "dependencies": [],
+            "details": "Create extract_features() function in src/features/transform.py that takes enriched data dict and returns dict with exactly 10 features: warehouse_block, mode_of_shipment, customer_care_calls, customer_rating, cost_of_product, prior_purchases, product_importance, gender, discount_offered, weight_in_gms. Handle missing fields gracefully.",
+            "status": "pending",
+            "testStrategy": "Unit test with valid enriched data, test with missing fields, verify output contains exactly 10 expected features",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement preprocessor loading mechanism",
+            "description": "Create function to load and cache the trained preprocessor.joblib file for feature transformation",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement load_preprocessor() function that loads preprocessor.joblib from models directory with caching mechanism to avoid repeated file I/O. Handle file not found errors and invalid preprocessor formats. Store loaded preprocessor in module-level cache.",
+            "status": "pending",
+            "testStrategy": "Test preprocessor loading, verify caching works, test error handling for missing/corrupt files",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Apply preprocessor transformation",
+            "description": "Implement feature transformation using the loaded preprocessor on extracted features",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Create transform_features() function that applies the loaded preprocessor transform to the 10 extracted features. Handle preprocessing errors and ensure output format matches model expectations. Convert pandas DataFrame output back to appropriate format for downstream processing.",
+            "status": "pending",
+            "testStrategy": "Test transformation with valid features, verify output format, test error handling for invalid feature values",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Preserve raw fields for KPI calculations",
+            "description": "Implement mechanism to pass through original enriched fields alongside transformed features",
+            "dependencies": [
+              3
+            ],
+            "details": "Create preserve_raw_fields() function that maintains original 18-field enriched data alongside the 10 transformed model features. Structure output to include both 'transformed_features' and 'raw_fields' sections for downstream KPI calculations and audit purposes.",
+            "status": "pending",
+            "testStrategy": "Verify raw fields are preserved unchanged, test data structure contains both transformed and raw sections",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Create main pipeline orchestration function",
+            "description": "Implement main transform_pipeline() function that orchestrates the complete feature engineering process",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Create transform_pipeline() function in src/features/transform.py that orchestrates: feature extraction → preprocessor loading → transformation → raw field preservation. Include error handling, logging, and return structured output with both transformed features and preserved raw fields. Make function reusable for both batch and streaming contexts.",
+            "status": "pending",
+            "testStrategy": "Integration test with complete enriched data, verify end-to-end transformation, test error propagation, verify output structure matches downstream requirements",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 4,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Break down feature engineering into: 1) Feature extraction from 18-field to 10-field format, 2) Preprocessor loading with caching mechanism, 3) Feature transformation using loaded preprocessor, 4) Raw field preservation for downstream KPI calculations, 5) Pipeline orchestration with error handling. Maintain data lineage."
+      },
+      {
+        "id": "10",
+        "title": "Implement KPI calculation engine",
+        "description": "Create per-order and running average KPI computation with 30-day rolling windows for operational metrics",
+        "details": "Implement src/kpi/calculator.py with compute_order_kpis() for delay_probability pass-through and fulfillment_gap flag (order_status='shipped' AND delay_probability > threshold). Implement compute_running_kpis() querying predictions table for 30-day window, computing segment risk score (avg delay_probability), on-time delivery rate (% below threshold), high-risk order count grouped by warehouse_block, mode_of_shipment, product_importance.",
+        "testStrategy": "Test per-order KPI computation with various order_status and probability combinations, seed test DB with known predictions and verify aggregate calculations match expected values, test 30-day window filtering",
+        "priority": "medium",
+        "dependencies": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create KPI calculator module structure",
+            "description": "Set up the basic module structure for the KPI calculation engine with proper imports and class definitions",
+            "dependencies": [],
+            "details": "Create src/kpi/calculator.py with KPICalculator class, import necessary dependencies (SQLAlchemy, datetime, typing), define module constants for thresholds and window sizes, set up logging configuration",
+            "status": "pending",
+            "testStrategy": "Unit test module imports and class instantiation",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement compute_order_kpis function",
+            "description": "Create per-order KPI computation function that calculates delay probability pass-through and fulfillment gap flag",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement compute_order_kpis() function that takes order data and returns delay_probability as pass-through value and fulfillment_gap boolean flag based on condition (order_status='shipped' AND delay_probability > threshold). Include input validation and error handling",
+            "status": "pending",
+            "testStrategy": "Test with various order_status and probability combinations, verify fulfillment_gap flag logic",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement database query for 30-day rolling window",
+            "description": "Create database query function to retrieve predictions data within 30-day rolling window for running KPI calculations",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement query_predictions_window() function that queries predictions table with date filtering for 30-day rolling window, includes proper indexing hints, handles timezone considerations, returns structured data for KPI aggregation",
+            "status": "pending",
+            "testStrategy": "Test 30-day window filtering with known test data, verify date range calculations",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Implement compute_running_kpis function",
+            "description": "Create running average KPI computation function that calculates segment risk scores, on-time delivery rates, and high-risk order counts",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Implement compute_running_kpis() function that processes 30-day window data to compute: segment risk score (avg delay_probability), on-time delivery rate (% below threshold), high-risk order count. Group results by warehouse_block, mode_of_shipment, product_importance dimensions",
+            "status": "pending",
+            "testStrategy": "Seed test DB with known predictions and verify aggregate calculations match expected values",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Add comprehensive testing and integration",
+            "description": "Create comprehensive test suite and integrate KPI calculator with the overall system architecture",
+            "dependencies": [
+              4
+            ],
+            "details": "Create test fixtures with realistic data scenarios, implement integration tests with database models, add performance benchmarks for large datasets, create documentation and usage examples, ensure proper error handling and logging throughout the module",
+            "status": "pending",
+            "testStrategy": "Integration tests with full data pipeline, performance testing with large datasets, error scenario testing",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 6,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Structure KPI calculation as: 1) KPI calculator module setup with proper structure, 2) Per-order KPI computation with business logic, 3) Database query implementation for 30-day rolling windows, 4) Running KPI computation with aggregations and grouping, 5) Comprehensive testing and integration. Focus on performance and accuracy."
+      },
+      {
+        "id": "11",
+        "title": "Implement deviation detection and Kafka publishing",
+        "description": "Create threshold-based deviation detection and publish critical deviations to Kafka for agent consumption",
+        "details": "Implement src/detection/deviation_detector.py for threshold-based detection (critical>0.7, warning>0.5, info>0.3) and KPI breach detection. Store deviation records in Postgres. Implement src/detection/publisher.py to serialize deviation + order context to JSON and publish to deviation-events Kafka topic with order_id as key, only for severity >= warning. Implement src/kafka/client.py with async producer/consumer utilities and topic management.",
+        "testStrategy": "Test deviation detection with predictions at various thresholds, verify severity assignment and DB storage, test Kafka producer/consumer round-trip, test topic creation, verify severity filtering for publishing",
+        "priority": "medium",
+        "dependencies": [
+          "1",
+          "2",
+          "10"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement threshold-based deviation detector",
+            "description": "Create deviation_detector.py with threshold-based detection logic for critical, warning, and info severity levels",
+            "dependencies": [],
+            "details": "Implement src/detection/deviation_detector.py with DeviationDetector class. Define severity thresholds (critical>0.7, warning>0.5, info>0.3) and implement detect_deviations() method that takes prediction data and returns deviation records with appropriate severity assignment. Include KPI breach detection logic.",
+            "status": "pending",
+            "testStrategy": "Unit test deviation detection with predictions at various probability thresholds (0.8, 0.6, 0.4, 0.2), verify correct severity assignment (critical/warning/info), test edge cases at threshold boundaries",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement deviation database storage",
+            "description": "Add database persistence functionality to store deviation records in PostgreSQL using ORM models",
+            "dependencies": [
+              1
+            ],
+            "details": "Extend deviation_detector.py to include store_deviation() method that persists deviation records to Postgres using the Deviation ORM model. Include proper error handling and transaction management for database operations.",
+            "status": "pending",
+            "testStrategy": "Test deviation record creation in database, verify FK relationships to predictions table, test transaction rollback on database errors, verify all required fields are populated correctly",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement Kafka client utilities",
+            "description": "Create async Kafka producer/consumer utilities with topic management functionality",
+            "dependencies": [],
+            "details": "Implement src/kafka/client.py with KafkaClient class providing async producer and consumer utilities. Include create_topic(), publish_message(), and consume_messages() methods. Add proper connection management, error handling, and configuration for Kafka brokers.",
+            "status": "pending",
+            "testStrategy": "Test Kafka producer/consumer round-trip with test messages, verify topic creation functionality, test connection error handling, verify async operations work correctly",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Implement deviation event publisher",
+            "description": "Create publisher to serialize deviation and order context data and publish to Kafka topic",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Implement src/detection/publisher.py with DeviationPublisher class. Include serialize_deviation() method to convert deviation + order context to JSON format and publish_deviation() method to send to deviation-events Kafka topic using order_id as message key. Only publish deviations with severity >= warning.",
+            "status": "pending",
+            "testStrategy": "Test JSON serialization of deviation data, verify publishing to correct Kafka topic with proper message key, test severity filtering (only warning/critical published), verify message format matches expected schema",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Integrate deviation detection with publishing pipeline",
+            "description": "Connect deviation detection, storage, and publishing components into cohesive workflow",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Create integrated workflow in deviation_detector.py that combines detection, database storage, and Kafka publishing. Implement process_deviations() method that orchestrates the full pipeline: detect → store → publish (filtered by severity). Add proper error handling and logging.",
+            "status": "pending",
+            "testStrategy": "Integration test full deviation pipeline with sample prediction data, verify database records created and Kafka events published, test error handling with database/Kafka failures, verify severity filtering works end-to-end",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 7,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Divide deviation detection into: 1) Threshold-based deviation detector with severity classification, 2) Database storage for deviation records, 3) Kafka client utilities with async operations, 4) Deviation event publisher with JSON serialization, 5) Integrated pipeline with error handling. Ensure reliable event publishing."
+      },
+      {
+        "id": "12",
+        "title": "Implement unified processing pipeline",
+        "description": "Create orchestrated pipeline combining feature engineering, ML inference, KPI calculation, and deviation detection",
+        "details": "Implement src/pipeline/processor.py with run_pipeline() function executing: transform → inference → store predictions → KPI computation → deviation detection → store deviations → publish deviation events. Use single transaction boundary for DB writes. Return summary with prediction count, deviation count, severity breakdown. Make usable by both batch and streaming paths.",
+        "testStrategy": "Integration test with sample data, verify all DB records created correctly, verify Kafka events published, test error handling with partial failures, test transaction rollback on errors",
+        "priority": "high",
+        "dependencies": [
+          "7",
+          "8",
+          "9",
+          "10",
+          "11"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create pipeline processor module structure",
+            "description": "Set up the basic structure for the unified processing pipeline module with proper imports and configuration",
+            "dependencies": [],
+            "details": "Create src/pipeline/processor.py with necessary imports for database sessions, feature engineering, ML inference, KPI calculation, deviation detection, and Kafka publishing. Set up logging configuration and define pipeline configuration parameters.",
+            "status": "pending",
+            "testStrategy": "Unit test module imports and basic structure validation",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement core run_pipeline function signature and orchestration flow",
+            "description": "Create the main run_pipeline function that orchestrates the complete processing workflow from input to output",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement run_pipeline() function accepting input data and configuration parameters. Define the orchestration flow: transform → inference → store predictions → KPI computation → deviation detection → store deviations → publish deviation events. Set up error handling and logging for each step.",
+            "status": "pending",
+            "testStrategy": "Unit test function signature and basic flow validation with mock dependencies",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement database transaction management and prediction storage",
+            "description": "Add database transaction boundary management and implement prediction storage within the pipeline",
+            "dependencies": [
+              2
+            ],
+            "details": "Integrate database session management with single transaction boundary for all DB writes. Implement prediction storage after ML inference step, ensuring proper error handling and rollback capabilities. Store predictions with batch_job_id, features, and model outputs.",
+            "status": "pending",
+            "testStrategy": "Integration test with test database, verify transaction rollback on errors, test prediction storage with sample data",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Implement deviation storage and Kafka event publishing",
+            "description": "Add deviation detection results storage and implement Kafka event publishing for detected deviations",
+            "dependencies": [
+              3
+            ],
+            "details": "Store deviation detection results in database with proper foreign key relationships to predictions. Implement Kafka event publishing for deviation events with proper serialization and error handling. Ensure events are published only after successful database commits.",
+            "status": "pending",
+            "testStrategy": "Integration test deviation storage, verify Kafka events published correctly, test event publishing failure scenarios",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Implement pipeline summary generation and batch/streaming compatibility",
+            "description": "Add summary generation with metrics and ensure pipeline works for both batch and streaming processing modes",
+            "dependencies": [
+              4
+            ],
+            "details": "Generate pipeline execution summary including prediction count, deviation count, and severity breakdown. Ensure pipeline function is compatible with both batch processing (Airflow) and streaming processing contexts. Add performance metrics and execution time tracking.",
+            "status": "pending",
+            "testStrategy": "Integration test with sample data verifying complete pipeline execution, test both batch and streaming usage patterns, verify summary accuracy",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 8,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Structure the unified pipeline as: 1) Pipeline processor module structure and configuration, 2) Core orchestration function with workflow definition, 3) Database transaction management and prediction storage, 4) Deviation storage and Kafka event publishing, 5) Summary generation and batch/streaming compatibility. Ensure transactional integrity."
+      },
+      {
+        "id": "13",
+        "title": "Create RAG knowledge base with policy documents",
+        "description": "Create policy/SLA markdown documents and implement document ingestion pipeline using Chroma and OpenAI embeddings",
+        "details": "Create knowledge_base/ directory with shipping_policy.md, refund_policy.md, escalation_criteria.md, communication_guidelines.md, carrier_slas.md, warehouse_slas.md, apology_email.md, refund_confirmation.md with realistic detailed content. Implement src/rag/ingestion.py using LangChain TextSplitter for chunking, OpenAI text-embedding-3-small for embeddings, Chroma for storage with metadata (category, agent_type, source_file). Persist to data/chroma_db/ with idempotent startup. Implement src/rag/retrieval.py for similarity search with metadata filtering.",
+        "testStrategy": "Verify documents are parseable markdown with comprehensive content, test document chunking and embedding dimensions, test Chroma storage and retrieval, test idempotent re-ingestion, verify metadata filtering works correctly",
+        "priority": "medium",
+        "dependencies": [
+          "1",
+          "2"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create knowledge base directory structure and policy documents",
+            "description": "Create the knowledge_base/ directory and implement all required policy markdown documents with realistic detailed content",
+            "dependencies": [],
+            "details": "Create knowledge_base/ directory and implement shipping_policy.md, refund_policy.md, escalation_criteria.md, communication_guidelines.md, carrier_slas.md, warehouse_slas.md, apology_email.md, refund_confirmation.md with comprehensive, realistic content covering shipping timelines, refund processes, escalation procedures, communication standards, and SLA definitions",
+            "status": "pending",
+            "testStrategy": "Verify all markdown files are parseable, contain comprehensive content sections, and follow consistent formatting standards",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement document ingestion pipeline with LangChain TextSplitter",
+            "description": "Create src/rag/ingestion.py to handle document chunking and preprocessing using LangChain TextSplitter",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement src/rag/ingestion.py with LangChain TextSplitter for chunking markdown documents into optimal sizes for embedding. Include document loading, text preprocessing, chunk size optimization, and metadata extraction from source files including category, agent_type, and source_file information",
+            "status": "pending",
+            "testStrategy": "Test document chunking produces appropriate chunk sizes, verify metadata extraction works correctly, test handling of various markdown formats",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement OpenAI embeddings integration",
+            "description": "Add OpenAI text-embedding-3-small integration to convert document chunks into vector embeddings",
+            "dependencies": [
+              2
+            ],
+            "details": "Integrate OpenAI text-embedding-3-small model for generating embeddings from document chunks. Handle API rate limiting, batch processing for efficiency, error handling for API failures, and embedding dimension validation (1536 dimensions for text-embedding-3-small)",
+            "status": "pending",
+            "testStrategy": "Verify embedding dimensions are correct (1536), test batch processing efficiency, validate API error handling and rate limiting",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Implement Chroma vector database storage with persistence",
+            "description": "Set up Chroma vector database for storing embeddings with metadata and persistent storage to data/chroma_db/",
+            "dependencies": [
+              3
+            ],
+            "details": "Configure Chroma vector database with persistent storage to data/chroma_db/ directory. Implement collection creation with metadata schema, embedding storage with associated metadata (category, agent_type, source_file), and idempotent startup that handles existing collections gracefully",
+            "status": "pending",
+            "testStrategy": "Test Chroma storage persistence across restarts, verify metadata is stored correctly, test idempotent re-ingestion doesn't create duplicates",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Implement retrieval system with metadata filtering",
+            "description": "Create src/rag/retrieval.py for similarity search with metadata filtering capabilities",
+            "dependencies": [
+              4
+            ],
+            "details": "Implement src/rag/retrieval.py with similarity search functionality using Chroma. Support metadata filtering by category, agent_type, and source_file. Include configurable similarity thresholds, result ranking, and query preprocessing for optimal retrieval performance",
+            "status": "pending",
+            "testStrategy": "Test similarity search returns relevant results, verify metadata filtering works correctly, validate query preprocessing and result ranking",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 6,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Organize RAG implementation as: 1) Knowledge base directory and policy document creation, 2) Document ingestion pipeline with LangChain TextSplitter, 3) OpenAI embeddings integration with rate limiting, 4) Chroma vector database storage with persistence, 5) Retrieval system with metadata filtering. Focus on document quality and retrieval accuracy."
+      },
+      {
+        "id": "14",
+        "title": "Implement multi-agent orchestration system",
+        "description": "Create LLM-based agent orchestrator with four specialist agents and simulated business logic tools",
+        "details": "Implement src/agents/tools.py with 12 simulated tools: reschedule_shipment(), check_carrier_status(), transfer_warehouse(), draft_email(), send_notification(), log_interaction(), check_refund_eligibility(), issue_refund(), apply_credit(), create_ticket(), assign_human(), flag_priority(). Implement specialist agents: ShipmentAgent, CustomerAgent, PaymentAgent, EscalationAgent using LangChain with RAG context injection and tool access. Implement src/agents/orchestrator.py using LLM function calling to route deviations to appropriate agents, aggregate results, store in agent_responses table, and ingest into RAG.",
+        "testStrategy": "Unit test each tool with sample inputs and verify structured output, test each specialist agent with sample deviations, verify RAG context injection, test orchestrator routing logic with various deviation types, verify multi-agent invocation, verify DB storage and RAG ingestion",
+        "priority": "high",
+        "dependencies": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "13"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement simulated business logic tools",
+            "description": "Create 12 simulated business tools for agent operations including shipment, customer service, payment, and escalation functions",
+            "dependencies": [],
+            "details": "Implement src/agents/tools.py with 12 functions: reschedule_shipment(), check_carrier_status(), transfer_warehouse(), draft_email(), send_notification(), log_interaction(), check_refund_eligibility(), issue_refund(), apply_credit(), create_ticket(), assign_human(), flag_priority(). Each tool should return structured output and simulate realistic business operations with appropriate delays and responses.",
+            "status": "pending",
+            "testStrategy": "Unit test each tool with sample inputs and verify structured output format, test error handling for invalid inputs, verify realistic response times",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement ShipmentAgent specialist",
+            "description": "Create LangChain-based agent for handling shipment-related deviations with RAG context injection",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement ShipmentAgent class using LangChain framework with access to shipment tools (reschedule_shipment, check_carrier_status, transfer_warehouse). Configure RAG context injection for shipment policies and procedures. Agent should analyze shipment deviations and execute appropriate remediation actions.",
+            "status": "pending",
+            "testStrategy": "Test agent with sample shipment deviations, verify RAG context injection works correctly, test tool invocation and response handling",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement CustomerAgent and PaymentAgent specialists",
+            "description": "Create customer service and payment processing agents with appropriate tool access and RAG integration",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement CustomerAgent with access to customer tools (draft_email, send_notification, log_interaction) and PaymentAgent with payment tools (check_refund_eligibility, issue_refund, apply_credit). Both agents use LangChain with RAG context injection for relevant policies and historical interactions.",
+            "status": "pending",
+            "testStrategy": "Test both agents with respective deviation types, verify tool access permissions, test RAG context retrieval for customer and payment policies",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Implement EscalationAgent specialist",
+            "description": "Create escalation handling agent for complex cases requiring human intervention",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement EscalationAgent with access to escalation tools (create_ticket, assign_human, flag_priority). Agent should identify cases requiring human intervention and properly route them with appropriate priority levels and context information.",
+            "status": "pending",
+            "testStrategy": "Test escalation logic with various severity levels, verify ticket creation and human assignment, test priority flagging functionality",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Implement orchestrator with LLM routing logic",
+            "description": "Create main orchestrator that routes deviations to appropriate agents and aggregates results",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Implement src/agents/orchestrator.py using LLM function calling to analyze deviations and route to appropriate specialist agents (ShipmentAgent, CustomerAgent, PaymentAgent, EscalationAgent). Aggregate agent responses, store results in agent_responses table, and ingest conversation history into RAG system for future context.",
+            "status": "pending",
+            "testStrategy": "Test orchestrator routing logic with various deviation types, verify multi-agent invocation, test result aggregation, verify DB storage and RAG ingestion of responses",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 9,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Structure the multi-agent system as: 1) Simulated business logic tools implementation (12 tools), 2) ShipmentAgent specialist with RAG integration, 3) CustomerAgent and PaymentAgent specialists, 4) EscalationAgent for complex cases, 5) Orchestrator with LLM routing logic and result aggregation. Ensure proper agent coordination."
+      },
+      {
+        "id": "15",
+        "title": "Implement FastAPI REST endpoints",
+        "description": "Create comprehensive REST API exposing all system functionality with proper error handling and documentation",
+        "details": "Implement src/api/app.py with FastAPI application, lifespan events for model loading and DB initialization. Create route modules: health.py (GET /health), predict.py (POST /predict, POST /predict/batch), batch.py (GET /batch/{id}/status, /predictions, /deviations, /agent-responses), deviations.py (GET /deviations with filtering), agents.py (POST /trigger-agent), orders.py (GET /orders/{id}), kpi.py (GET /kpi/dashboard), knowledge.py (POST /knowledge/ingest, POST /knowledge/search). Include proper request/response models, error handling, and Swagger documentation.",
+        "testStrategy": "Test app startup/shutdown and model loading, test each endpoint with valid/invalid inputs, verify response formats, test error cases and 404 handling, verify Swagger documentation generation, test pagination and filtering",
+        "priority": "high",
+        "dependencies": [
+          "7",
+          "8",
+          "10",
+          "12",
+          "13",
+          "14"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create FastAPI application with lifespan events",
+            "description": "Implement the main FastAPI application in src/api/app.py with proper lifespan event handlers for model loading and database initialization",
+            "dependencies": [],
+            "details": "Create FastAPI app instance with lifespan context manager to handle startup (load ML model, initialize DB connection) and shutdown (cleanup resources) events. Configure CORS, middleware, and basic app settings. Include error handling for startup failures.",
+            "status": "pending",
+            "testStrategy": "Test app startup/shutdown lifecycle, verify model and DB initialization, test startup failure scenarios",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement core API route modules",
+            "description": "Create route modules for health, predict, and batch endpoints with proper request/response models",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement health.py (GET /health), predict.py (POST /predict for single predictions, POST /predict/batch for batch processing), and batch.py (GET /batch/{id}/status, /predictions, /deviations, /agent-responses). Include Pydantic models for request/response validation and proper error handling.",
+            "status": "pending",
+            "testStrategy": "Test each endpoint with valid/invalid inputs, verify response formats match Pydantic models, test error cases and validation",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement deviation and agent management endpoints",
+            "description": "Create route modules for deviation filtering, agent triggering, and order management functionality",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement deviations.py (GET /deviations with filtering parameters), agents.py (POST /trigger-agent for manual agent invocation), and orders.py (GET /orders/{id} for order details). Include query parameter validation, pagination support, and proper error responses for not found cases.",
+            "status": "pending",
+            "testStrategy": "Test filtering and pagination functionality, verify agent triggering works correctly, test 404 handling for non-existent resources",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Implement KPI dashboard and knowledge management endpoints",
+            "description": "Create route modules for KPI dashboard data and knowledge base operations",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement kpi.py (GET /kpi/dashboard for dashboard metrics) and knowledge.py (POST /knowledge/ingest for document ingestion, POST /knowledge/search for semantic search). Include proper data aggregation for KPIs and integration with knowledge base components.",
+            "status": "pending",
+            "testStrategy": "Test KPI data aggregation and formatting, verify knowledge ingestion and search functionality, test error handling for invalid documents",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Configure comprehensive error handling and API documentation",
+            "description": "Implement global error handlers, response models, and configure Swagger/OpenAPI documentation",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Add global exception handlers for common errors (validation, database, not found), create standardized error response models, configure Swagger UI with proper descriptions and examples. Include request/response logging and API versioning setup.",
+            "status": "pending",
+            "testStrategy": "Verify Swagger documentation generation is complete and accurate, test global error handling covers all error types, validate API documentation examples work correctly",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 7,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Structure the API implementation as: 1) FastAPI application with lifespan events and model loading, 2) Core API routes (health, predict, batch) with validation, 3) Deviation and agent management endpoints with filtering, 4) KPI dashboard and knowledge management endpoints, 5) Comprehensive error handling and API documentation. Ensure production readiness."
+      },
+      {
+        "id": "16",
+        "title": "Implement Airflow batch processing DAG",
+        "description": "Create Airflow DAG for processing uploaded CSV files through the unified pipeline",
+        "details": "Implement dags/batch_processing_dag.py triggered by batch_job_id config. Tasks: 1) Load CSV by batch_job_id path, 2) Validate schema, 3) Run unified processing pipeline, 4) Update batch_job status to completed/failed. Include error handling to set status=failed with error_message on any task failure. Use Airflow 3.x syntax with proper task dependencies.",
+        "testStrategy": "Trigger DAG with test batch_job_id, verify predictions stored in DB, verify status transitions from pending to completed, test error handling with invalid CSV, verify error_message stored on failure",
+        "priority": "medium",
+        "dependencies": [
+          "12",
+          "8"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create Airflow DAG structure and configuration",
+            "description": "Set up the basic DAG structure with proper configuration for batch processing",
+            "dependencies": [],
+            "details": "Create dags/batch_processing_dag.py with DAG definition using Airflow 3.x syntax. Configure DAG with batch_job_id parameter, proper scheduling, and error handling settings. Set up DAG-level configuration including retries, timeout, and failure callbacks.",
+            "status": "pending",
+            "testStrategy": "Verify DAG appears in Airflow UI, test DAG parsing without errors, verify configuration parameters are accessible",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement CSV loading task",
+            "description": "Create Airflow task to load CSV file based on batch_job_id path",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement PythonOperator task that retrieves batch_job record by ID, constructs file path from batch_job metadata, loads CSV file into memory, and validates file exists and is readable. Handle file not found errors gracefully.",
+            "status": "pending",
+            "testStrategy": "Test with valid batch_job_id and existing CSV file, test error handling with missing file, verify CSV data is properly loaded",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement schema validation task",
+            "description": "Create Airflow task to validate CSV schema against expected 18-field enriched format",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement PythonOperator task that validates loaded CSV has required 18 fields matching enriched schema. Check column names, data types, and required fields. Raise validation errors if schema doesn't match expected format.",
+            "status": "pending",
+            "testStrategy": "Test with valid 18-field CSV, test with invalid schema CSV, verify proper error messages for schema mismatches",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Implement unified pipeline execution task",
+            "description": "Create Airflow task to execute the unified processing pipeline on validated CSV data",
+            "dependencies": [
+              3
+            ],
+            "details": "Implement PythonOperator task that calls the unified processing pipeline with validated CSV data. Pass batch_job_id for proper record association. Handle pipeline execution errors and capture processing summary including prediction count and deviation count.",
+            "status": "pending",
+            "testStrategy": "Test pipeline execution with valid data, verify predictions and deviations are stored in database, test error handling with pipeline failures",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Implement status update and error handling tasks",
+            "description": "Create Airflow tasks to update batch_job status and handle failures across the DAG",
+            "dependencies": [
+              4
+            ],
+            "details": "Implement success callback task to update batch_job status to 'completed' with completion timestamp. Implement failure callback task to update status to 'failed' with error_message. Set up proper task dependencies and ensure status updates occur regardless of task success/failure.",
+            "status": "pending",
+            "testStrategy": "Test successful DAG run updates status to completed, test failed tasks update status to failed with error message, verify proper error handling across all failure scenarios",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 5,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Structure the batch DAG as: 1) DAG structure and configuration with Airflow 3.x syntax, 2) CSV loading task with file path resolution, 3) Schema validation task with error handling, 4) Unified pipeline execution task, 5) Status update and comprehensive error handling. Ensure proper task dependencies and error propagation."
+      },
+      {
+        "id": "17",
+        "title": "Implement Airflow streaming DAG with Kafka consumer",
+        "description": "Create Airflow DAG using Kafka consumer trigger for processing fulfillment events in micro-batches",
+        "details": "Implement dags/streaming_dag.py using Airflow 3.x Kafka consumer trigger on fulfillment-events topic. Collect micro-batches (15 seconds elapsed OR 1,000 messages buffered). Deserialize messages into DataFrame, run unified processing pipeline, bulk insert predictions/deviations, publish critical deviations to deviation-events topic.",
+        "testStrategy": "Publish test events to fulfillment-events topic, verify micro-batch collection and processing, verify pipeline execution and DB storage, verify deviation events published to Kafka, test micro-batch size limits",
+        "priority": "medium",
+        "dependencies": [
+          "12",
+          "11"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set up Airflow DAG structure with Kafka consumer trigger",
+            "description": "Create the basic DAG structure using Airflow 3.x Kafka consumer trigger for the fulfillment-events topic",
+            "dependencies": [],
+            "details": "Implement dags/streaming_dag.py with DAG definition, configure Kafka consumer trigger to listen to fulfillment-events topic, set up basic DAG parameters including schedule, catchup settings, and tags. Configure Kafka connection parameters and consumer group settings.",
+            "status": "pending",
+            "testStrategy": "Unit test DAG structure creation, verify Kafka trigger configuration, test DAG parsing without errors",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement micro-batch collection logic",
+            "description": "Create the micro-batch collection mechanism with dual triggers: 15 seconds elapsed OR 1,000 messages buffered",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement buffering logic that collects Kafka messages until either 15 seconds have elapsed or 1,000 messages are accumulated, whichever comes first. Use Airflow sensors or custom operators to manage the batching logic with proper timeout handling.",
+            "status": "pending",
+            "testStrategy": "Test time-based batching with mock messages, test count-based batching, verify batch size limits are respected",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement message deserialization to DataFrame",
+            "description": "Create functionality to deserialize collected Kafka messages into a pandas DataFrame for processing",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement message deserialization logic that converts JSON messages from Kafka into structured DataFrame format matching the 18-field enriched schema. Handle message parsing errors gracefully and log invalid messages for monitoring.",
+            "status": "pending",
+            "testStrategy": "Test with valid JSON messages, test error handling with malformed messages, verify DataFrame schema matches expected 18-field format",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Integrate unified processing pipeline execution",
+            "description": "Connect the streaming DAG to the unified processing pipeline for feature engineering, ML inference, and deviation detection",
+            "dependencies": [
+              3
+            ],
+            "details": "Import and execute the unified processing pipeline from src/pipeline/processor.py within the Airflow task. Pass the deserialized DataFrame to run_pipeline() function and handle the returned summary with prediction and deviation counts.",
+            "status": "pending",
+            "testStrategy": "Integration test with sample DataFrame, verify pipeline execution within Airflow context, test error propagation from pipeline to DAG",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Implement critical deviation publishing to Kafka",
+            "description": "Add functionality to publish critical deviations to the deviation-events Kafka topic after processing",
+            "dependencies": [
+              4
+            ],
+            "details": "Implement Kafka producer logic within the DAG to publish critical deviations to deviation-events topic. Filter deviations by severity level and format messages appropriately. Configure Kafka producer settings for reliability and error handling.",
+            "status": "pending",
+            "testStrategy": "Test deviation event publishing to correct topic, verify message format and content, test producer error handling and retry logic",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 7,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Structure the streaming DAG as: 1) DAG structure with Kafka consumer trigger setup, 2) Micro-batch collection logic with dual triggers (time/count), 3) Message deserialization to DataFrame format, 4) Unified processing pipeline integration, 5) Critical deviation publishing to Kafka. Focus on streaming reliability and batch optimization."
+      },
+      {
+        "id": "18",
+        "title": "Implement Airflow agent orchestration DAG",
+        "description": "Create Airflow DAG using Kafka consumer trigger for processing deviation events through the multi-agent system",
+        "details": "Implement dags/agent_orchestration_dag.py using Kafka consumer trigger on deviation-events topic. Deserialize deviation event, call multi-agent orchestrator with deviation context, store agent response in agent_responses table, ingest resolution into RAG knowledge base for future reference.",
+        "testStrategy": "Publish test deviation to deviation-events topic, verify agent orchestrator execution, verify agent response storage in DB, verify RAG ingestion of resolution, test with various deviation severities and types",
+        "priority": "medium",
+        "dependencies": [
+          "14",
+          "11"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Kafka consumer trigger for Airflow DAG",
+            "description": "Create Kafka consumer trigger configuration to listen for deviation events from the deviation-events topic",
+            "dependencies": [],
+            "details": "Implement KafkaConsumerTrigger in the DAG to monitor deviation-events topic. Configure consumer group, offset management, and connection parameters. Set up proper error handling and retry logic for Kafka connectivity issues.",
+            "status": "pending",
+            "testStrategy": "Test Kafka consumer trigger activation with mock deviation events, verify consumer group registration, test connection failure scenarios",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement deviation event deserialization",
+            "description": "Create deserialization logic to parse incoming deviation events from Kafka messages",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement JSON deserialization for deviation event messages. Validate event schema and extract deviation context including severity, reason, prediction details, and metadata. Handle malformed messages gracefully with appropriate logging.",
+            "status": "pending",
+            "testStrategy": "Test with valid deviation event JSON, test with malformed JSON, verify schema validation and error handling",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Integrate multi-agent orchestrator call",
+            "description": "Implement the call to multi-agent orchestrator system with deviation context",
+            "dependencies": [
+              2
+            ],
+            "details": "Create function to call multi-agent orchestrator API with deserialized deviation context. Pass deviation severity, type, and related data. Handle orchestrator response including agent recommendations, actions, and conversation history. Implement timeout and retry logic.",
+            "status": "pending",
+            "testStrategy": "Test orchestrator API calls with various deviation types, test timeout scenarios, verify response parsing and error handling",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Implement agent response storage",
+            "description": "Store agent orchestrator responses in the agent_responses database table",
+            "dependencies": [
+              3
+            ],
+            "details": "Implement database insertion logic for agent_responses table using the ORM models. Store agent_type, action, details_json, conversation_history, and link to deviation_id. Use proper transaction handling and error recovery.",
+            "status": "pending",
+            "testStrategy": "Test database insertion with various agent response formats, verify FK constraints, test transaction rollback on errors",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Implement RAG knowledge base ingestion",
+            "description": "Ingest agent resolution data into RAG knowledge base for future reference and learning",
+            "dependencies": [
+              4
+            ],
+            "details": "Implement RAG ingestion logic to store successful agent resolutions as knowledge base entries. Format resolution data for vector embedding, include deviation context and resolution details. Handle ingestion failures gracefully without affecting main workflow.",
+            "status": "pending",
+            "testStrategy": "Test RAG ingestion with successful resolutions, verify knowledge base entries created, test ingestion failure scenarios and fallback behavior",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 6,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Structure the agent DAG as: 1) Kafka consumer trigger for deviation events, 2) Deviation event deserialization and validation, 3) Multi-agent orchestrator integration, 4) Agent response storage in database, 5) RAG knowledge base ingestion for learning. Ensure proper error handling and data persistence."
+      },
+      {
+        "id": "19",
+        "title": "Create Docker Compose infrastructure",
+        "description": "Containerize all services for single-command deployment with proper networking and volume management",
+        "details": "Create docker-compose.yml with services: api (FastAPI on port 8000), redpanda (Kafka-compatible on port 9092), airflow-webserver (port 8080), airflow-scheduler, postgres (port 5432), stream-producer (Kafka simulator). Create Dockerfile for FastAPI service and Dockerfile.producer for Kafka simulator. Include shared network, volume mounts for models/data/DAGs, health checks, and environment variable passthrough. Create .env.example documenting all required environment variables.",
+        "testStrategy": "docker-compose up starts all services successfully, each service passes health checks, API accessible on :8000, Airflow UI on :8080, Kafka on :9092, verify volume mounts and environment variable loading",
+        "priority": "high",
+        "dependencies": [
+          "15",
+          "16",
+          "17",
+          "18"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create docker-compose.yml with all service definitions",
+            "description": "Create the main docker-compose.yml file defining all required services with proper networking and port configurations",
+            "dependencies": [],
+            "details": "Create docker-compose.yml with services: api (FastAPI on port 8000), redpanda (Kafka-compatible on port 9092), airflow-webserver (port 8080), airflow-scheduler, postgres (port 5432), stream-producer (Kafka simulator). Configure shared network, proper service dependencies, and environment variable passthrough from .env file.",
+            "status": "pending",
+            "testStrategy": "Validate docker-compose.yml syntax, verify all services are defined with correct ports and networks",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Create Dockerfile for FastAPI service",
+            "description": "Create Dockerfile to containerize the FastAPI application with proper Python environment and dependencies",
+            "dependencies": [
+              1
+            ],
+            "details": "Create Dockerfile for FastAPI service using Python base image, install requirements.txt, copy application code, expose port 8000, and set proper entrypoint. Include health check endpoint configuration and proper working directory setup.",
+            "status": "pending",
+            "testStrategy": "Build Docker image successfully, verify FastAPI service starts and responds to health checks",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Create Dockerfile.producer for Kafka simulator",
+            "description": "Create specialized Dockerfile for the Kafka stream producer service that simulates real-time data",
+            "dependencies": [
+              1
+            ],
+            "details": "Create Dockerfile.producer for Kafka simulator service using Python base image, install Kafka client dependencies, copy producer code, and configure proper entrypoint. Include environment variable configuration for Kafka broker connection and data generation parameters.",
+            "status": "pending",
+            "testStrategy": "Build producer Docker image successfully, verify it can connect to Kafka and produce test messages",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Configure volume mounts and health checks",
+            "description": "Add volume mounts for persistent data and health checks for all services in docker-compose.yml",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Configure volume mounts for models/, data/, and Airflow DAGs directories. Add health checks for all services: API endpoint health check, Kafka readiness probe, Airflow webserver health, Postgres connection check. Configure restart policies and dependency ordering.",
+            "status": "pending",
+            "testStrategy": "Verify volume mounts persist data across container restarts, confirm all health checks pass on service startup",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Create .env.example with all required environment variables",
+            "description": "Document all required environment variables in .env.example file with descriptions and example values",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Create .env.example documenting all required environment variables: DATABASE_URL, KAFKA_BROKER, OPENAI_API_KEY, MODEL_PATH, AIRFLOW_UID, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, and any service-specific configuration. Include comments explaining each variable's purpose and expected format.",
+            "status": "pending",
+            "testStrategy": "Verify all services start successfully using .env.example as template, confirm no missing environment variables cause startup failures",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 6,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Structure the containerization as: 1) Docker-compose.yml with all service definitions and networking, 2) Dockerfile for FastAPI service with proper Python environment, 3) Dockerfile.producer for Kafka simulator service, 4) Volume mounts and health checks configuration, 5) Environment variable documentation in .env.example. Ensure single-command deployment."
+      },
+      {
+        "id": "20",
+        "title": "Implement Kafka producer simulator",
+        "description": "Create standalone service generating synthetic enriched order events for testing the streaming pipeline",
+        "details": "Implement src/kafka/producer_simulator.py generating realistic enriched order data matching 18-field schema. Randomize fields within realistic distributions (warehouse blocks A-E, shipment modes Ship/Flight/Road, etc.). Simulate upstream system data (OMS, WMS, TMS, CRM, PIM, Pricing). Configurable events-per-second rate. Run as continuous Docker service publishing to fulfillment-events topic.",
+        "testStrategy": "Verify generated events match 18-field enriched schema, test configurable event rate, verify realistic field distributions, test continuous operation without memory leaks, verify events published to correct Kafka topic",
+        "priority": "medium",
+        "dependencies": [
+          "11",
+          "19"
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create base producer simulator class structure",
+            "description": "Implement the foundational class structure for the Kafka producer simulator with configuration management",
+            "dependencies": [],
+            "details": "Create src/kafka/producer_simulator.py with ProducerSimulator class. Implement __init__ method accepting configuration parameters (kafka_bootstrap_servers, topic_name, events_per_second, batch_size). Set up Kafka producer client with proper serialization settings. Include logging configuration and error handling setup.",
+            "status": "pending",
+            "testStrategy": "Unit test class initialization, verify Kafka producer client creation, test configuration parameter validation",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement 18-field enriched order data generator",
+            "description": "Create realistic synthetic data generation matching the enriched order schema with proper field distributions",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement generate_enriched_order() method creating realistic 18-field order data. Include fields from upstream systems: OMS (order_id, customer_id, order_date), WMS (warehouse_block A-E, product_weight), TMS (mode_of_shipment Ship/Flight/Road), CRM (customer_care_calls, customer_rating), PIM (product_importance, category), Pricing (cost_of_product, discount_offered). Use realistic distributions and correlations between fields.",
+            "status": "pending",
+            "testStrategy": "Verify generated data matches 18-field schema, test field value distributions are realistic, validate data type consistency",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement configurable event publishing loop",
+            "description": "Create the main event publishing loop with configurable rate control and continuous operation",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Implement run() method with continuous loop publishing events at configurable events-per-second rate. Use asyncio.sleep() for precise timing control. Include batch publishing optimization and proper error handling with retry logic. Implement graceful shutdown handling and memory management to prevent leaks during continuous operation.",
+            "status": "pending",
+            "testStrategy": "Test configurable event rate accuracy, verify continuous operation without memory leaks, test graceful shutdown handling",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Add Docker service configuration and deployment",
+            "description": "Create Docker configuration for running the producer simulator as a continuous service",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Create Dockerfile for producer simulator service with Python runtime and required dependencies. Implement docker-compose.yml configuration connecting to Kafka cluster and publishing to fulfillment-events topic. Add environment variable configuration for Kafka connection settings, event rate, and other runtime parameters. Include health check endpoint.",
+            "status": "pending",
+            "testStrategy": "Test Docker container builds successfully, verify service connects to Kafka cluster, test environment variable configuration",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Implement monitoring and validation features",
+            "description": "Add event validation, monitoring metrics, and operational observability to the producer simulator",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Implement schema validation for generated events before publishing. Add metrics collection (events published, errors, publishing rate). Create health check endpoint for Docker service monitoring. Implement event sampling and logging for debugging. Add configuration validation and startup checks to ensure proper Kafka connectivity and topic existence.",
+            "status": "pending",
+            "testStrategy": "Verify events match schema before publishing, test metrics collection accuracy, validate health check endpoint functionality, test startup validation checks",
+            "parentId": "undefined"
+          }
+        ],
+        "complexity": 5,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Structure the producer simulator as: 1) Base producer class with configuration management, 2) 18-field enriched order data generator with realistic distributions, 3) Configurable event publishing loop with rate control, 4) Docker service configuration and deployment, 5) Monitoring and validation features. Focus on realistic data generation and continuous operation."
+      }
+    ],
+    "metadata": {
+      "version": "1.0.0",
+      "lastModified": "2026-02-15T17:08:16.262Z",
+      "taskCount": 20,
+      "completedCount": 1,
+      "tags": [
+        "master"
+      ]
+    }
+  }
+}

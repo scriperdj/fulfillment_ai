@@ -1,0 +1,173 @@
+{
+	"meta": {
+		"generatedAt": "2026-02-15T17:06:53.720Z",
+		"tasksAnalyzed": 20,
+		"totalTasks": 20,
+		"analysisCount": 20,
+		"thresholdScore": 5,
+		"projectName": "Task Master",
+		"usedResearch": false
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 1,
+			"taskTitle": "Implement project configuration module",
+			"complexityScore": 4,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down the configuration module implementation into: 1) Project structure setup and dependency installation, 2) Pydantic Settings class definition with field validation, 3) Environment variable loading with .env file support, 4) Configuration validation and error handling, 5) Singleton pattern implementation with typed accessors. Each subtask should focus on a specific aspect of configuration management.",
+			"reasoning": "Medium complexity due to Pydantic Settings integration, environment variable handling, and validation logic. Well-defined scope with clear requirements. The 5 existing subtasks provide good granular breakdown."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "Implement structured logging module",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Divide the logging implementation into: 1) Base logger configuration with JSON formatter, 2) Correlation ID support and context injection mechanisms, 3) Logger factory with configuration management, 4) Log level filtering and handler configuration, 5) Integration utilities and documentation. Focus on structured output and correlation tracking.",
+			"reasoning": "Medium-high complexity involving custom JSON formatting, correlation ID propagation, and integration with multiple frameworks (FastAPI, Airflow). Requires careful design for context management and performance considerations."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "Implement PostgreSQL ORM models",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Structure the ORM implementation as: 1) BatchJob model with UUID primary key and status tracking, 2) Prediction model with BatchJob foreign key relationship, 3) Deviation model with dual FK relationships to Prediction and BatchJob, 4) AgentResponse model with Deviation FK, 5) Database indexes and model configuration finalization. Ensure proper FK chain integrity.",
+			"reasoning": "Medium-high complexity due to multiple interconnected models with complex foreign key relationships, JSONB fields, UUID primary keys, and index optimization. The FK chain requires careful design to maintain referential integrity."
+		},
+		{
+			"taskId": 4,
+			"taskTitle": "Implement database session management",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down session management into: 1) Database configuration management for async/sync connections, 2) Async session factory with asyncpg for FastAPI, 3) Sync session factory with psycopg2 for Airflow, 4) FastAPI dependency injection patterns, 5) Integration testing and performance optimization. Handle both async and sync paradigms.",
+			"reasoning": "High complexity requiring dual session management (async/sync), connection pooling configuration, dependency injection patterns, and integration with different frameworks. Performance and resource management are critical concerns."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "Download and prepare Kaggle dataset",
+			"complexityScore": 3,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Organize dataset preparation as: 1) Kaggle API credentials setup and authentication, 2) Data directory structure creation, 3) Dataset download from Kaggle using API, 4) Dataset structure and integrity validation, 5) Documentation creation with data dictionary. Focus on data quality verification.",
+			"reasoning": "Low-medium complexity involving straightforward API integration and file operations. Main challenges are authentication setup and data validation. Well-defined scope with clear success criteria."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "Implement ML model training notebook",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Structure the ML notebook into: 1) EDA section with comprehensive data visualization, 2) Feature engineering pipeline with categorical encoding, 3) Model training and algorithm comparison with cross-validation, 4) Model evaluation with multiple metrics and visualizations, 5) Model artifact export with metadata. Ensure reproducible ML workflow.",
+			"reasoning": "High complexity involving complete ML pipeline from EDA to model export. Requires expertise in multiple algorithms, feature engineering, model evaluation, and artifact management. Performance requirements (ROC-AUC >= 0.65) add constraints."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "Implement ML model loading and inference",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Divide inference implementation into: 1) Model loader utilities with validation and caching, 2) Single prediction function with severity classification, 3) Batch prediction with vectorized operations, 4) Model validation and comprehensive error handling, 5) Integration and performance optimization. Focus on production readiness.",
+			"reasoning": "Medium-high complexity requiring model loading, validation, single/batch inference, and severity classification. Production considerations like caching, error handling, and performance optimization add complexity."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Implement data ingestion and schema validation",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Structure data ingestion as: 1) CSV file upload handler with file I/O management, 2) Batch job record creation in database, 3) 18-field schema definition with constraints, 4) Row-level validation logic with detailed error reporting, 5) Batch validation with comprehensive error collection. Ensure robust error handling.",
+			"reasoning": "Medium complexity involving file handling, database operations, and comprehensive schema validation. The 18-field schema validation with detailed error reporting requires careful design for usability and performance."
+		},
+		{
+			"taskId": 9,
+			"taskTitle": "Implement feature engineering pipeline",
+			"complexityScore": 4,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down feature engineering into: 1) Feature extraction from 18-field to 10-field format, 2) Preprocessor loading with caching mechanism, 3) Feature transformation using loaded preprocessor, 4) Raw field preservation for downstream KPI calculations, 5) Pipeline orchestration with error handling. Maintain data lineage.",
+			"reasoning": "Medium complexity involving data transformation, preprocessor integration, and maintaining both transformed and raw data. Straightforward scope but requires careful handling of data formats and error propagation."
+		},
+		{
+			"taskId": 10,
+			"taskTitle": "Implement KPI calculation engine",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Structure KPI calculation as: 1) KPI calculator module setup with proper structure, 2) Per-order KPI computation with business logic, 3) Database query implementation for 30-day rolling windows, 4) Running KPI computation with aggregations and grouping, 5) Comprehensive testing and integration. Focus on performance and accuracy.",
+			"reasoning": "Medium-high complexity involving database queries, time-window calculations, aggregations, and business logic implementation. The 30-day rolling window and multiple grouping dimensions require careful query optimization."
+		},
+		{
+			"taskId": 11,
+			"taskTitle": "Implement deviation detection and Kafka publishing",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Divide deviation detection into: 1) Threshold-based deviation detector with severity classification, 2) Database storage for deviation records, 3) Kafka client utilities with async operations, 4) Deviation event publisher with JSON serialization, 5) Integrated pipeline with error handling. Ensure reliable event publishing.",
+			"reasoning": "High complexity combining threshold detection, database operations, and Kafka integration. Async operations, error handling, and ensuring reliable event delivery add significant complexity. Multiple integration points increase risk."
+		},
+		{
+			"taskId": 12,
+			"taskTitle": "Implement unified processing pipeline",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Structure the unified pipeline as: 1) Pipeline processor module structure and configuration, 2) Core orchestration function with workflow definition, 3) Database transaction management and prediction storage, 4) Deviation storage and Kafka event publishing, 5) Summary generation and batch/streaming compatibility. Ensure transactional integrity.",
+			"reasoning": "High complexity as it orchestrates multiple complex subsystems (feature engineering, ML inference, KPI calculation, deviation detection, Kafka publishing) with transactional boundaries. Error handling and rollback scenarios are critical."
+		},
+		{
+			"taskId": 13,
+			"taskTitle": "Create RAG knowledge base with policy documents",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Organize RAG implementation as: 1) Knowledge base directory and policy document creation, 2) Document ingestion pipeline with LangChain TextSplitter, 3) OpenAI embeddings integration with rate limiting, 4) Chroma vector database storage with persistence, 5) Retrieval system with metadata filtering. Focus on document quality and retrieval accuracy.",
+			"reasoning": "Medium-high complexity involving document processing, embeddings generation, vector database operations, and retrieval systems. Integration with external APIs (OpenAI) and ensuring document quality add complexity."
+		},
+		{
+			"taskId": 14,
+			"taskTitle": "Implement multi-agent orchestration system",
+			"complexityScore": 9,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Structure the multi-agent system as: 1) Simulated business logic tools implementation (12 tools), 2) ShipmentAgent specialist with RAG integration, 3) CustomerAgent and PaymentAgent specialists, 4) EscalationAgent for complex cases, 5) Orchestrator with LLM routing logic and result aggregation. Ensure proper agent coordination.",
+			"reasoning": "Very high complexity involving LLM integration, multiple specialist agents, tool orchestration, RAG context injection, and complex routing logic. The coordination between 4 agents with 12 tools and database storage creates significant integration challenges."
+		},
+		{
+			"taskId": 15,
+			"taskTitle": "Implement FastAPI REST endpoints",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Structure the API implementation as: 1) FastAPI application with lifespan events and model loading, 2) Core API routes (health, predict, batch) with validation, 3) Deviation and agent management endpoints with filtering, 4) KPI dashboard and knowledge management endpoints, 5) Comprehensive error handling and API documentation. Ensure production readiness.",
+			"reasoning": "High complexity due to comprehensive API surface covering all system functionality, proper error handling, documentation, and integration with multiple backend services. Lifespan management and dependency injection add architectural complexity."
+		},
+		{
+			"taskId": 16,
+			"taskTitle": "Implement Airflow batch processing DAG",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Structure the batch DAG as: 1) DAG structure and configuration with Airflow 3.x syntax, 2) CSV loading task with file path resolution, 3) Schema validation task with error handling, 4) Unified pipeline execution task, 5) Status update and comprehensive error handling. Ensure proper task dependencies and error propagation.",
+			"reasoning": "Medium complexity involving Airflow DAG creation, task orchestration, error handling, and database status management. Well-defined workflow but requires proper error propagation and status tracking."
+		},
+		{
+			"taskId": 17,
+			"taskTitle": "Implement Airflow streaming DAG with Kafka consumer",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Structure the streaming DAG as: 1) DAG structure with Kafka consumer trigger setup, 2) Micro-batch collection logic with dual triggers (time/count), 3) Message deserialization to DataFrame format, 4) Unified processing pipeline integration, 5) Critical deviation publishing to Kafka. Focus on streaming reliability and batch optimization.",
+			"reasoning": "High complexity combining Airflow with Kafka streaming, micro-batch processing, and real-time data handling. The dual trigger mechanism and streaming reliability requirements add significant complexity."
+		},
+		{
+			"taskId": 18,
+			"taskTitle": "Implement Airflow agent orchestration DAG",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Structure the agent DAG as: 1) Kafka consumer trigger for deviation events, 2) Deviation event deserialization and validation, 3) Multi-agent orchestrator integration, 4) Agent response storage in database, 5) RAG knowledge base ingestion for learning. Ensure proper error handling and data persistence.",
+			"reasoning": "Medium-high complexity integrating Airflow with Kafka, multi-agent system, and RAG knowledge base. Multiple integration points and the need for proper error handling and data persistence add complexity."
+		},
+		{
+			"taskId": 19,
+			"taskTitle": "Create Docker Compose infrastructure",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Structure the containerization as: 1) Docker-compose.yml with all service definitions and networking, 2) Dockerfile for FastAPI service with proper Python environment, 3) Dockerfile.producer for Kafka simulator service, 4) Volume mounts and health checks configuration, 5) Environment variable documentation in .env.example. Ensure single-command deployment.",
+			"reasoning": "Medium-high complexity orchestrating multiple services (API, Kafka, Airflow, Postgres, producer) with proper networking, volume management, and health checks. Service dependencies and environment configuration add complexity."
+		},
+		{
+			"taskId": 20,
+			"taskTitle": "Implement Kafka producer simulator",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Structure the producer simulator as: 1) Base producer class with configuration management, 2) 18-field enriched order data generator with realistic distributions, 3) Configurable event publishing loop with rate control, 4) Docker service configuration and deployment, 5) Monitoring and validation features. Focus on realistic data generation and continuous operation.",
+			"reasoning": "Medium complexity involving realistic data generation, Kafka integration, rate control, and continuous operation. The need for realistic field distributions and memory management for continuous operation adds moderate complexity."
+		}
+	]
+}

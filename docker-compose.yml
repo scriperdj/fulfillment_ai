@@ -1,42 +1,205 @@
-version: '3.8'
+version: "3.8"
+
+networks:
+  fulfillment-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
 
 services:
+  # --------------------------------------------------------------------------
+  # PostgreSQL database
+  # --------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-fulfillment}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fulfillment_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-fulfillment_ai}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fulfillment}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fulfillment-net
+
+  # --------------------------------------------------------------------------
+  # Redpanda — Kafka-compatible message broker
+  # --------------------------------------------------------------------------
+  redpanda:
+    image: redpandadata/redpanda:latest
+    command:
+      - redpanda
+      - start
+      - --smp
+      - "1"
+      - --memory
+      - 512M
+      - --overprovisioned
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+    ports:
+      - "9092:9092"
+      - "8081:8081"
+      - "9644:9644"
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    networks:
+      - fulfillment-net
+
+  # --------------------------------------------------------------------------
+  # Redpanda Console — Kafka UI
+  # --------------------------------------------------------------------------
+  redpanda-console:
+    image: redpandadata/console:latest
+    ports:
+      - "8085:8080"
+    environment:
+      KAFKA_BROKERS: redpanda:29092
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    networks:
+      - fulfillment-net
+
+  # --------------------------------------------------------------------------
+  # FastAPI service
+  # --------------------------------------------------------------------------
   api:
-    build: .
-    container_name: fulfillment_ai
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - LOG_LEVEL=INFO
-      - DEBUG=False
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://fulfillment:fulfillment_pass@postgres:5432/fulfillment_ai}
+      DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:-postgresql+psycopg2://fulfillment:fulfillment_pass@postgres:5432/fulfillment_ai}
+      KAFKA_BROKER: redpanda:9092
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      MODEL_PATH: /app/models/
     volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
-    env_file:
-      - .env
-    restart: unless-stopped
+      - ./models:/app/models
+      - ./knowledge_base:/app/knowledge_base
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
+      start_period: 10s
       retries: 3
-      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - fulfillment-net
 
-  # Optional: PostgreSQL for persistence
-  # postgres:
-  #   image: postgres:15-alpine
-  #   container_name: fulfillment_ai_db
-  #   environment:
-  #     POSTGRES_USER: fulfillment
-  #     POSTGRES_PASSWORD: ${DB_PASSWORD}
-  #     POSTGRES_DB: fulfillment_ai
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   ports:
-  #     - "5432:5432"
-  #   restart: unless-stopped
+  # --------------------------------------------------------------------------
+  # Airflow — init (one-shot)
+  # --------------------------------------------------------------------------
+  airflow-init:
+    image: apache/airflow:2.8.1-python3.11
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db init &&
+        airflow users create \
+          --username admin \
+          --password admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: ${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN:-postgresql+psycopg2://fulfillment:fulfillment_pass@postgres:5432/fulfillment_ai}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - fulfillment-net
 
-volumes:
-  # postgres_data:
-  #   driver: local
+  # --------------------------------------------------------------------------
+  # Airflow — webserver
+  # --------------------------------------------------------------------------
+  airflow-webserver:
+    image: apache/airflow:2.8.1-python3.11
+    command: webserver
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: ${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN:-postgresql+psycopg2://fulfillment:fulfillment_pass@postgres:5432/fulfillment_ai}
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      KAFKA_BROKER: redpanda:9092
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./models:/opt/airflow/models
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 5
+    networks:
+      - fulfillment-net
+
+  # --------------------------------------------------------------------------
+  # Airflow — scheduler
+  # --------------------------------------------------------------------------
+  airflow-scheduler:
+    image: apache/airflow:2.8.1-python3.11
+    command: scheduler
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: ${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN:-postgresql+psycopg2://fulfillment:fulfillment_pass@postgres:5432/fulfillment_ai}
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      KAFKA_BROKER: redpanda:9092
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./models:/opt/airflow/models
+    depends_on:
+      airflow-webserver:
+        condition: service_healthy
+    networks:
+      - fulfillment-net
+
+  # --------------------------------------------------------------------------
+  # Kafka event simulator (stream-producer)
+  # --------------------------------------------------------------------------
+  stream-producer:
+    build:
+      context: .
+      dockerfile: Dockerfile.producer
+    environment:
+      KAFKA_BROKER: redpanda:9092
+      EVENTS_PER_SECOND: ${EVENTS_PER_SECOND:-5}
+      KAFKA_TOPIC: fulfillment-events
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - fulfillment-net

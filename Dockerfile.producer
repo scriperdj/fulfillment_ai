@@ -1,0 +1,13 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install only the dependencies needed for the producer
+RUN pip install --no-cache-dir aiokafka pydantic pydantic-settings python-dotenv
+
+# Copy producer code and supporting modules
+COPY src/kafka/ src/kafka/
+COPY src/config/ src/config/
+COPY src/__init__.py src/__init__.py
+
+CMD ["python", "-m", "src.kafka.producer_simulator"]

@@ -7,15 +7,7 @@ import { AlertCircle, AlertTriangle, Info } from "lucide-react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
-
-interface Deviation {
-    id: string;
-    prediction_id: string;
-    severity: "critical" | "warning" | "info";
-    reason: string;
-    status: string;
-    created_at: string;
-}
+import type { DeviationResponse, PaginatedResponse } from "@/lib/types";
 
 const SEVERITY_ICONS = {
     critical: AlertCircle,
@@ -29,15 +21,8 @@ const SEVERITY_STYLES = {
     info: "text-primary-400 bg-primary-500/10 border-primary-500/20",
 };
 
-interface PaginatedResponse<T> {
-    items: T[];
-    total: number;
-    skip: number;
-    limit: number;
-}
-
 export function DeviationTable() {
-    const { data, isLoading } = useSWR<PaginatedResponse<Deviation>>("/deviations", fetcher, {
+    const { data, isLoading } = useSWR<PaginatedResponse<DeviationResponse>>("/deviations", fetcher, {
         refreshInterval: 5000,
     });
 
@@ -80,14 +65,16 @@ export function DeviationTable() {
                                     </td>
                                     <td className="p-3">
                                         <div className="font-mono text-slate-200 text-xs mb-1">
-                                            ID: {deviation.prediction_id.slice(0, 8)}...
+                                            {deviation.order_id || `PID: ${deviation.prediction_id.slice(0, 8)}...`}
                                         </div>
                                         <div className="text-slate-400 truncate max-w-[300px]" title={deviation.reason}>
                                             {deviation.reason}
                                         </div>
                                     </td>
                                     <td className="p-3 text-slate-500 whitespace-nowrap">
-                                        {formatDistanceToNow(new Date(deviation.created_at), { addSuffix: true })}
+                                        {deviation.created_at
+                                            ? formatDistanceToNow(new Date(deviation.created_at), { addSuffix: true })
+                                            : "N/A"}
                                     </td>
                                     <td className="p-3">
                                         <span className="text-xs text-slate-400 font-mono bg-white/5 px-2 py-1 rounded">
@@ -96,7 +83,7 @@ export function DeviationTable() {
                                     </td>
                                     <td className="p-3 text-right">
                                         <Link
-                                            href={`/orders/${deviation.prediction_id}`}
+                                            href={`/orders?search=${deviation.order_id || deviation.prediction_id}`}
                                             className="text-primary-400 hover:text-primary-300 text-xs font-medium"
                                         >
                                             View Details →

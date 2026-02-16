@@ -84,6 +84,7 @@ def compute_running_kpis(session: Session) -> dict[str, Any]:
             "avg_delay_probability": 0.0,
             "on_time_rate": 0.0,
             "high_risk_count": 0,
+            "fulfillment_gap_count": 0,
             "severity_breakdown": {"critical": 0, "warning": 0, "info": 0},
             "by_warehouse_block": [],
             "by_mode_of_shipment": [],
@@ -96,6 +97,14 @@ def compute_running_kpis(session: Session) -> dict[str, Any]:
     on_time_count = sum(1 for p in probs if p < settings.SEVERITY_WARNING_THRESHOLD)
     on_time_rate = on_time_count / total
     high_risk_count = sum(1 for p in probs if p >= settings.SEVERITY_CRITICAL_THRESHOLD)
+
+    # Fulfillment gap: shipped orders with high delay probability
+    fulfillment_gap_count = sum(
+        1
+        for p in predictions
+        if str((p.features_json or {}).get("order_status", "")).lower() == "shipped"
+        and p.delay_probability > settings.FULFILLMENT_GAP_THRESHOLD
+    )
 
     # Severity breakdown
     severity_counts = {"critical": 0, "warning": 0, "info": 0}
@@ -128,6 +137,7 @@ def compute_running_kpis(session: Session) -> dict[str, Any]:
         "avg_delay_probability": round(avg_prob, 4),
         "on_time_rate": round(on_time_rate, 4),
         "high_risk_count": high_risk_count,
+        "fulfillment_gap_count": fulfillment_gap_count,
         "severity_breakdown": severity_counts,
         "by_warehouse_block": _segment_breakdown("warehouse_block"),
         "by_mode_of_shipment": _segment_breakdown("mode_of_shipment"),

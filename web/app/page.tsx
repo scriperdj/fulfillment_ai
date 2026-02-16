@@ -1,5 +1,5 @@
 import { KPIGrid } from "@/components/dashboard/KPIGrid";
-import { NetworkGraph } from "@/components/dashboard/NetworkGraph";
+import { WarehousePerformance } from "@/components/dashboard/WarehousePerformance";
 import { AgentFeed } from "@/components/dashboard/AgentFeed";
 import { DeviationTable } from "@/components/dashboard/DeviationTable";
 
@@ -20,7 +20,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[450px]">
         <div className="lg:col-span-2 h-full">
-          <NetworkGraph />
+          <WarehousePerformance />
         </div>
         <div className="h-full">
           <AgentFeed />

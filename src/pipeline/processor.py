@@ -19,6 +19,36 @@ from src.ml.inference import predict_batch as ml_predict_batch
 
 logger = logging.getLogger(__name__)
 
+# Mapping from common CSV Title_case column names to the snake_case keys
+# expected by the rest of the pipeline (features, KPI, etc.).
+_COLUMN_ALIASES: dict[str, str] = {
+    "ID": "order_id",
+    "Warehouse_block": "warehouse_block",
+    "Mode_of_Shipment": "mode_of_shipment",
+    "Customer_care_calls": "customer_care_calls",
+    "Customer_rating": "customer_rating",
+    "Cost_of_the_Product": "cost_of_the_product",
+    "Prior_purchases": "prior_purchases",
+    "Product_importance": "product_importance",
+    "Gender": "gender",
+    "Discount_offered": "discount_offered",
+    "Weight_in_gms": "weight_in_gms",
+    "Reached.on.Time_Y.N": "reached_on_time",
+}
+
+
+def _normalize_keys(order: dict[str, Any]) -> dict[str, Any]:
+    """Normalise order dict keys to snake_case.
+
+    Applies ``_COLUMN_ALIASES`` so that CSV Title_case headers are translated
+    to the snake_case names the pipeline expects.  Keys that are already
+    snake_case (e.g. from Pydantic ``model_dump``) pass through unchanged.
+    """
+    normalised: dict[str, Any] = {}
+    for key, value in order.items():
+        normalised[_COLUMN_ALIASES.get(key, key)] = value
+    return normalised
+
 
 def run_pipeline(
     orders: list[dict[str, Any]],
@@ -44,6 +74,9 @@ def run_pipeline(
             "deviations_count": 0,
             "severity_breakdown": {},
         }
+
+    # Normalise keys so CSV Title_case headers become snake_case
+    orders = [_normalize_keys(o) for o in orders]
 
     # Step 1: ML Inference (vectorized)
     predictions_data = ml_predict_batch(orders)

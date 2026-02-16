@@ -100,6 +100,7 @@ class BatchStatusResponse(BaseModel):
 class DeviationResponse(BaseModel):
     id: str
     prediction_id: str
+    order_id: str | None = None
     severity: str
     reason: str
     status: str
@@ -169,6 +170,7 @@ class KPIDashboardResponse(BaseModel):
     avg_delay_probability: float
     on_time_rate: float
     high_risk_count: int
+    fulfillment_gap_count: int = 0
     severity_breakdown: dict[str, int]
     by_warehouse_block: list[dict[str, Any]]
     by_mode_of_shipment: list[dict[str, Any]]

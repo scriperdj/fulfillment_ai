@@ -7,13 +7,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { ResolutionTimeline, TimelineEvent } from "@/components/order/ResolutionTimeline";
 import { Box, Truck } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-
-interface OrderDetailResponse {
-    order_id: string;
-    predictions: any[];
-    deviations: any[];
-    agent_responses: any[];
-}
+import type { OrderDetailResponse, PredictionResponse, DeviationResponse, AgentResponseRecord } from "@/lib/types";
 
 export default function OrderDetailPage() {
     const params = useParams();
@@ -37,26 +31,26 @@ export default function OrderDetailPage() {
     }
 
     const events: TimelineEvent[] = [
-        ...(order.predictions || []).map((p: any) => ({
+        ...(order.predictions || []).map((p: PredictionResponse) => ({
             id: p.id,
             type: "prediction" as const,
-            timestamp: p.created_at,
+            timestamp: p.created_at || new Date().toISOString(),
             title: `Risk Analysis: ${(p.delay_probability * 100).toFixed(0)}%`,
             description: `Source: ${p.source}`,
             severity: p.severity,
         })),
-        ...(order.deviations || []).map((d: any) => ({
+        ...(order.deviations || []).map((d: DeviationResponse) => ({
             id: d.id,
             type: "deviation" as const,
-            timestamp: d.created_at,
+            timestamp: d.created_at || new Date().toISOString(),
             title: `${d.severity.toUpperCase()} Alert`,
             description: d.reason,
             severity: d.severity,
         })),
-        ...(order.agent_responses || []).map((a: any) => ({
+        ...(order.agent_responses || []).map((a: AgentResponseRecord) => ({
             id: a.id,
             type: "agent_response" as const,
-            timestamp: a.created_at,
+            timestamp: a.created_at || new Date().toISOString(),
             title: `${a.agent_type.toUpperCase()} Intervention`,
             description: a.action,
             metadata: a.details_json,
@@ -72,6 +66,31 @@ export default function OrderDetailPage() {
         { name: "Safe", value: 1 - delayProb },
     ];
 
+    // Extract features from latest prediction
+    const features = latestPrediction?.features_json || {};
+    const warehouseBlock = features.warehouse_block as string || "N/A";
+    const modeOfShipment = features.mode_of_shipment as string || "N/A";
+    const weightGms = features.weight_in_gms as number | undefined;
+    const costOfProduct = features.cost_of_the_product as number | undefined;
+    const productImportance = features.product_importance as string || "N/A";
+    const customerRating = features.customer_rating as number | undefined;
+    const discountOffered = features.discount_offered as number | undefined;
+    const gender = features.gender as string | undefined;
+    const customerCareCalls = features.customer_care_calls as number | undefined;
+    const priorPurchases = features.prior_purchases as number | undefined;
+
+    const metadataFields = [
+        { label: "Weight", value: weightGms != null ? `${(weightGms / 1000).toFixed(2)} kg` : "N/A" },
+        { label: "Product Cost", value: costOfProduct != null ? `$${costOfProduct.toLocaleString()}` : "N/A" },
+        { label: "Shipment Mode", value: modeOfShipment },
+        { label: "Importance", value: productImportance },
+        { label: "Customer Rating", value: customerRating != null ? `${customerRating}/5` : "N/A" },
+        { label: "Discount", value: discountOffered != null ? `${discountOffered}%` : "N/A" },
+        { label: "Gender", value: gender || "N/A" },
+        { label: "Care Calls", value: customerCareCalls != null ? String(customerCareCalls) : "N/A" },
+        { label: "Prior Purchases", value: priorPurchases != null ? String(priorPurchases) : "N/A" },
+    ];
+
     return (
         <div className="space-y-6 max-w-7xl mx-auto">
             {/* Header */}
@@ -84,8 +103,8 @@ export default function OrderDetailPage() {
                         </span>
                     </h1>
                     <p className="text-sm text-slate-400 mt-1 flex items-center gap-4">
-                        <span className="flex items-center gap-1"><Box className="h-3 w-3" /> SKU-99283</span>
-                        <span className="flex items-center gap-1"><Truck className="h-3 w-3" /> Warehouse B</span>
+                        <span className="flex items-center gap-1"><Box className="h-3 w-3" /> {productImportance} Importance</span>
+                        <span className="flex items-center gap-1"><Truck className="h-3 w-3" /> Warehouse {warehouseBlock}</span>
                     </p>
                 </div>
             </GlassCard>
@@ -119,20 +138,14 @@ export default function OrderDetailPage() {
                     </GlassCard>
 
                     <GlassCard>
-                        <h3 className="text-sm font-medium text-slate-400 mb-4">Metadata</h3>
+                        <h3 className="text-sm font-medium text-slate-400 mb-4">Order Metadata</h3>
                         <div className="space-y-3 text-sm">
-                            <div className="flex justify-between border-b border-white/5 pb-2">
-                                <span className="text-slate-500">Weight</span>
-                                <span className="text-slate-200">1.2 kg</span>
-                            </div>
-                            <div className="flex justify-between border-b border-white/5 pb-2">
-                                <span className="text-slate-500">Value</span>
-                                <span className="text-slate-200">$450.00</span>
-                            </div>
-                            <div className="flex justify-between border-b border-white/5 pb-2">
-                                <span className="text-slate-500">Service Level</span>
-                                <span className="text-slate-200">Express</span>
-                            </div>
+                            {metadataFields.map((field) => (
+                                <div key={field.label} className="flex justify-between border-b border-white/5 pb-2">
+                                    <span className="text-slate-500">{field.label}</span>
+                                    <span className="text-slate-200">{field.value}</span>
+                                </div>
+                            ))}
                         </div>
                     </GlassCard>
                 </div>

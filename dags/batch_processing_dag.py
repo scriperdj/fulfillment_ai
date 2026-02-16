@@ -20,6 +20,22 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
+_CSV_COLUMN_RENAMES: dict[str, str] = {
+    "ID": "order_id",
+    "Warehouse_block": "warehouse_block",
+    "Mode_of_Shipment": "mode_of_shipment",
+    "Customer_care_calls": "customer_care_calls",
+    "Customer_rating": "customer_rating",
+    "Cost_of_the_Product": "cost_of_the_product",
+    "Prior_purchases": "prior_purchases",
+    "Product_importance": "product_importance",
+    "Gender": "gender",
+    "Discount_offered": "discount_offered",
+    "Weight_in_gms": "weight_in_gms",
+    "Reached.on.Time_Y.N": "reached_on_time",
+}
+
+
 def load_csv(batch_job_id: str, *, session: Any) -> list[dict[str, Any]]:
     """Load CSV data for a batch job.
 
@@ -32,7 +48,7 @@ def load_csv(batch_job_id: str, *, session: Any) -> list[dict[str, Any]]:
 
     Returns
     -------
-    List of order dicts from the CSV.
+    List of order dicts from the CSV with snake_case keys.
     """
     from src.config.settings import get_settings
     from src.db.models import BatchJob
@@ -48,6 +64,8 @@ def load_csv(batch_job_id: str, *, session: Any) -> list[dict[str, Any]]:
         raise FileNotFoundError(f"CSV file not found: {file_path}")
 
     df = pd.read_csv(file_path)
+    # Normalise CSV column names (Title_case → snake_case)
+    df = df.rename(columns=_CSV_COLUMN_RENAMES)
     return df.to_dict(orient="records")
 
 

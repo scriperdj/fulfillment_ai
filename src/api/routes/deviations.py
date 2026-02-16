@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from src.api.deps import get_db
 from src.api.schemas import DeviationResponse, PaginatedResponse
-from src.db.models import Deviation
+from src.db.models import Deviation, Prediction
 
 router = APIRouter(tags=["deviations"])
 
@@ -20,28 +20,29 @@ def list_deviations(
     limit: int = Query(default=50, ge=1, le=200),
     session: Session = Depends(get_db),
 ):
-    q = session.query(Deviation)
+    q = session.query(Deviation, Prediction.order_id).join(
+        Prediction, Deviation.prediction_id == Prediction.id
+    )
 
     if severity:
         q = q.filter(Deviation.severity == severity)
     if order_id:
-        q = q.join(Deviation.prediction).filter(
-            Deviation.prediction.has(order_id=order_id)
-        )
+        q = q.filter(Prediction.order_id == order_id)
 
     total = q.count()
-    devs = q.order_by(Deviation.created_at.desc()).offset(skip).limit(limit).all()
+    rows = q.order_by(Deviation.created_at.desc()).offset(skip).limit(limit).all()
 
     items = [
         DeviationResponse(
             id=str(d.id),
             prediction_id=str(d.prediction_id),
+            order_id=oid,
             severity=d.severity,
             reason=d.reason,
             status=d.status,
             created_at=d.created_at,
         )
-        for d in devs
+        for d, oid in rows
     ]
     return PaginatedResponse[DeviationResponse](
         items=items, total=total, skip=skip, limit=limit

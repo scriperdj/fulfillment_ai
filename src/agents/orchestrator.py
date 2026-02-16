@@ -7,6 +7,7 @@ from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import tool
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src.agents.specialists import (
@@ -15,7 +16,7 @@ from src.agents.specialists import (
     PaymentAgent,
     ShipmentAgent,
 )
-from src.db.models import AgentResponse
+from src.db.models import AgentResponse, Deviation
 
 logger = logging.getLogger(__name__)
 
@@ -181,12 +182,34 @@ class AgentOrchestrator:
             logger.warning("No deviation_id in context, skipping DB storage")
             return
 
-        response = AgentResponse(
-            deviation_id=deviation_id,
-            agent_type=result["agent_type"],
-            action=result["action"],
-            details_json=result.get("details"),
-            conversation_history=result.get("conversation_history"),
+        # Verify deviation exists to avoid FK constraint violations
+        # (e.g. stale Kafka messages referencing deleted deviations)
+        exists = (
+            self._session.query(Deviation.id)
+            .filter(Deviation.id == deviation_id)
+            .first()
         )
-        self._session.add(response)
-        self._session.flush()
+        if not exists:
+            logger.warning(
+                "Deviation %s not found in DB, skipping agent response storage",
+                deviation_id,
+            )
+            return
+
+        try:
+            response = AgentResponse(
+                deviation_id=deviation_id,
+                agent_type=result["agent_type"],
+                action=result["action"],
+                details_json=result.get("details"),
+                conversation_history=result.get("conversation_history"),
+            )
+            self._session.add(response)
+            self._session.flush()
+        except IntegrityError:
+            # Race condition: deviation deleted between check and insert
+            self._session.rollback()
+            logger.warning(
+                "IntegrityError storing response for deviation %s, rolled back",
+                deviation_id,
+            )

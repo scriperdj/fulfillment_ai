@@ -92,6 +92,7 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       MODEL_PATH: /app/models/
     volumes:
+      - ./src:/app/src
       - ./models:/app/models
       - ./knowledge_base:/app/knowledge_base
       - ./data:/app/data

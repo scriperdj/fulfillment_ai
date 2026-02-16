@@ -48,7 +48,7 @@ def consume_deviation_event(
             bootstrap_servers=broker,
             group_id=group_id,
             auto_offset_reset="latest",
-            enable_auto_commit=True,
+            enable_auto_commit=False,
             consumer_timeout_ms=timeout_seconds * 1000,
             value_deserializer=lambda m: m.decode("utf-8"),
             max_poll_records=10,
@@ -61,6 +61,14 @@ def consume_deviation_event(
         for msg in consumer:
             messages.append(msg.value)
             break  # Process one event at a time by default
+
+        # Commit offsets only after successful consumption
+        if messages:
+            try:
+                consumer.commit()
+                logger.info("Committed Kafka offsets after consuming %d event(s)", len(messages))
+            except Exception:
+                logger.warning("Failed to commit Kafka offsets", exc_info=True)
     except Exception:
         logger.warning("Error consuming deviation events", exc_info=True)
     finally:
@@ -210,7 +218,8 @@ try:
 
     @dag(
         dag_id="agent_orchestration",
-        schedule=None,
+        schedule="@continuous",
+        max_active_runs=1,
         start_date=datetime(2024, 1, 1),
         catchup=False,
         tags=["fulfillment", "agents"],

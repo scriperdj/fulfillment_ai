@@ -26,6 +26,13 @@ async def lifespan(app: FastAPI):
         logger.info("ML model pre-loaded successfully")
     except Exception:
         logger.warning("ML model pre-loading failed — will load on first request", exc_info=True)
+    try:
+        from src.db.init_db import init_db_sync
+
+        init_db_sync()
+        logger.info("Database tables initialized")
+    except Exception:
+        logger.warning("Database init failed", exc_info=True)
     yield
     logger.info("Shutting down Fulfillment AI API")
 

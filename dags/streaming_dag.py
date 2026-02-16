@@ -57,7 +57,7 @@ def consume_micro_batch(
             bootstrap_servers=broker,
             group_id=group_id,
             auto_offset_reset="latest",
-            enable_auto_commit=True,
+            enable_auto_commit=False,
             consumer_timeout_ms=batch_timeout * 1000,
             value_deserializer=lambda m: m.decode("utf-8"),
         )
@@ -75,6 +75,14 @@ def consume_micro_batch(
             if time.monotonic() - start >= batch_timeout:
                 logger.info("Micro-batch timeout: %d messages collected in %.1fs", len(messages), batch_timeout)
                 break
+
+        # Commit offsets only after successful consumption
+        if messages:
+            try:
+                consumer.commit()
+                logger.info("Committed Kafka offsets after consuming %d messages", len(messages))
+            except Exception:
+                logger.warning("Failed to commit Kafka offsets", exc_info=True)
     except Exception:
         logger.warning("Error consuming from Kafka", exc_info=True)
     finally:
@@ -199,7 +207,8 @@ try:
 
     @dag(
         dag_id="streaming_processing",
-        schedule=None,
+        schedule="@continuous",
+        max_active_runs=1,
         start_date=datetime(2024, 1, 1),
         catchup=False,
         tags=["fulfillment", "streaming"],

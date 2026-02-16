@@ -134,7 +134,7 @@ dmypy.json
 Thumbs.db
 
 # Project-specific
-data/raw/*.csv
+data/*
 data/processed/*.csv
 logs/*.log
 *.sqlite

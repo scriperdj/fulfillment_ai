@@ -9,6 +9,20 @@ AI-driven retail fulfillment platform that predicts delivery delays, detects ope
 3. **Resolves autonomously** — LLM-powered specialist agents (Shipment, Customer, Payment, Escalation) take action using RAG-retrieved knowledge
 4. **Monitors in real-time** — Next.js dashboard with KPI visualization, batch upload, agent activity feed, and order tracking
 
+## Demo
+
+### Operations Dashboard
+Get a visual walkthrough of the platform's core features:
+
+![Fulfillment AI Demo](docs/assets/fulfillment_ai_demo.gif)
+
+**What you see in the demo:**
+- **KPI Dashboard** — Real-time metrics (orders processed, delay probability, on-time rate, risk orders)
+- **Warehouse Performance Charts** — Delay rates by warehouse block, shipment mode, and product importance
+- **Severity Breakdown** — Visual breakdown of critical, warning, and info-level deviations
+- **Live Agent Activity Feed** — Real-time stream of autonomous agent decisions and resolutions
+- **Deviation Queue Table** — Sortable table of detected deviations with severity, order ID, and drill-down links
+
 ## Architecture
 
 ```

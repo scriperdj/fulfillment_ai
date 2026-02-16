@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from src.api.deps import get_db
 from src.api.schemas import (
     AgentResponseRecord,
+    BatchListResponse,
     BatchStatusResponse,
     BatchUploadResponse,
     DeviationResponse,
@@ -41,6 +42,40 @@ def _get_batch_job(batch_id: str, session: Session) -> BatchJob:
     if not job:
         raise HTTPException(status_code=404, detail="Batch job not found")
     return job
+
+
+@router.get("/", response_model=BatchListResponse)
+def batch_list(session: Session = Depends(get_db)):
+    jobs = session.query(BatchJob).order_by(BatchJob.created_at.desc()).limit(50).all()
+
+    results: list[BatchStatusResponse] = []
+    for job in jobs:
+        status = job.status
+        # Poll Airflow for non-terminal jobs with a DAG run
+        if status not in ("completed", "failed") and job.dag_run_id:
+            from src.api.airflow_client import get_dag_run_state
+
+            airflow_state = get_dag_run_state(job.dag_run_id)
+            if airflow_state:
+                mapped = _AIRFLOW_STATE_MAP.get(airflow_state, airflow_state)
+                if mapped in ("completed", "failed") and status != mapped:
+                    job.status = mapped
+                    session.flush()
+                status = mapped
+
+        results.append(
+            BatchStatusResponse(
+                batch_job_id=str(job.id),
+                status=status,
+                filename=job.filename,
+                row_count=job.row_count,
+                created_at=job.created_at,
+                completed_at=job.completed_at,
+                error_message=job.error_message,
+            )
+        )
+
+    return BatchListResponse(jobs=results)
 
 
 @router.post("/upload", response_model=BatchUploadResponse, status_code=201)

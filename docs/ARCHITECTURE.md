@@ -13,88 +13,265 @@ Autonomous AI-driven system for proactive detection and resolution of retail ful
 
 ---
 
-## 2. Architecture Diagram
+## 2. Architecture Diagrams
+
+Three levels of C4-style diagrams — from high-level system context down to internal component detail.
+
+### 2.1 Level 1 — System Context
+
+Shows the platform as a single box with the external actors and systems it interacts with.
 
 ```mermaid
-flowchart TD
-    subgraph UPSTREAM["Upstream Systems (Simulated)"]
-        direction LR
-        OMS["OMS"]
-        WMS["WMS"]
-        TMS["TMS"]
-        CRM["CRM"]
-        PIM["PIM"]
-        PRICING["Pricing"]
+graph TB
+    OPS["<b>Operations Manager</b><br/>Uploads CSVs, monitors<br/>KPI dashboard, reviews deviations"]
+    CS["<b>Customer Service Team</b><br/>Views deviations, reviews<br/>agent resolutions"]
+
+    PLATFORM["<b>Fulfillment AI Platform</b><br/>ML-powered risk prediction,<br/>autonomous deviation resolution,<br/>real-time operational monitoring"]
+
+    UPSTREAM["<b>Upstream Systems</b><br/>(OMS / WMS / TMS / CRM / PIM / Pricing)<br/>Simulated by Stream Producer"]
+    OPENAI["<b>OpenAI API</b><br/>gpt-4o-mini — agent reasoning<br/>text-embedding-3-small — RAG embeddings"]
+
+    OPS -- "Upload CSV, view dashboard<br/>(browser → port 3000)" --> PLATFORM
+    CS -- "View deviations &<br/>agent decisions<br/>(browser → port 3000)" --> PLATFORM
+    UPSTREAM -- "Enriched order events<br/>(Kafka protocol)" --> PLATFORM
+    PLATFORM -- "LLM completions &<br/>embedding requests<br/>(HTTPS)" --> OPENAI
+
+    classDef actor fill:#08427b,stroke:#052e56,color:#fff
+    classDef system fill:#1168bd,stroke:#0b4884,color:#fff
+    classDef external fill:#999999,stroke:#6b6b6b,color:#fff
+
+    class OPS,CS actor
+    class PLATFORM system
+    class UPSTREAM,OPENAI external
+```
+
+### 2.2 Level 2 — Container Diagram
+
+Shows all runtime containers, data stores, and the data flows between them.
+
+```mermaid
+graph TB
+    OPS["<b>Operations Manager</b>"]
+    CS["<b>Customer Service Team</b>"]
+    OPENAI["<b>OpenAI API</b>"]
+
+    subgraph PLATFORM["Fulfillment AI Platform"]
+        direction TB
+
+        WEB["<b>Next.js Dashboard</b><br/>(web/ · port 3000)<br/>Tailwind CSS, SWR polling"]
+
+        API["<b>FastAPI</b><br/>(api · port 8000)<br/>REST API, ML serving,<br/>batch upload, Airflow trigger"]
+
+        subgraph AIRFLOW["Airflow (LocalExecutor · port 8080)"]
+            direction LR
+            AF_API["API Server<br/>(airflow-webserver)"]
+            AF_SCHED["Scheduler<br/>(airflow-scheduler)"]
+            AF_DAG["DAG Processor<br/>(airflow-dag-processor)"]
+        end
+
+        BATCH_DAG["<b>batch_processing</b> DAG<br/>API-triggered via REST"]
+        STREAM_DAG["<b>streaming_dag</b> DAG<br/>@continuous · Kafka consumer"]
+        AGENT_DAG["<b>agent_orchestration</b> DAG<br/>@continuous · Kafka consumer"]
+
+        PRODUCER["<b>Stream Producer</b><br/>(stream-producer)<br/>~5 events/sec simulator"]
+
+        REDPANDA["<b>Redpanda</b><br/>(redpanda · port 9092)<br/>Kafka-compatible broker"]
+
+        RP_CONSOLE["<b>Redpanda Console</b><br/>(redpanda-console · port 8085)<br/>Kafka UI"]
+
+        PG[("<b>PostgreSQL</b><br/>(postgres · port 5432)<br/>batch_jobs → predictions<br/>→ deviations → agent_responses")]
+
+        CHROMA[("<b>Chroma</b><br/>(embedded, file-based)<br/>data/chroma_db/<br/>RAG vector store")]
     end
 
-    subgraph INTEGRATION["Data Integration"]
-        direction LR
-        CSV["CSV Upload"]
-        PRODUCER["Kafka Producer"]
+    %% External actor flows
+    OPS -- "Browser" --> WEB
+    CS -- "Browser" --> WEB
+    WEB -- "SWR polling<br/>REST/JSON" --> API
+
+    %% API flows
+    API -- "JWT REST<br/>trigger batch DAG" --> AF_API
+    API -- "Poll DAG run state<br/>GET /api/v2/dags/..." --> AF_API
+    API -- "Read/write<br/>SQL" --> PG
+    API -- "Embed & store policies<br/>at startup" --> CHROMA
+    API -- "LLM & embeddings<br/>HTTPS" --> OPENAI
+
+    %% Airflow internals
+    AF_API --> AF_SCHED
+    AF_SCHED --> BATCH_DAG
+    AF_SCHED --> STREAM_DAG
+    AF_SCHED --> AGENT_DAG
+    AF_DAG -. "parse DAG files" .-> AF_SCHED
+
+    %% Producer → Redpanda
+    PRODUCER -- "fulfillment-events<br/>~5 msg/sec" --> REDPANDA
+
+    %% Redpanda Console
+    RP_CONSOLE -. "monitor topics" .-> REDPANDA
+
+    %% Streaming DAG
+    REDPANDA -- "fulfillment-events<br/>micro-batch (15s / 1K)" --> STREAM_DAG
+    STREAM_DAG -- "Store predictions<br/>& deviations" --> PG
+    STREAM_DAG -- "deviation-events" --> REDPANDA
+
+    %% Batch DAG
+    BATCH_DAG -- "Store predictions<br/>& deviations" --> PG
+    BATCH_DAG -- "deviation-events" --> REDPANDA
+
+    %% Agent DAG
+    REDPANDA -- "deviation-events" --> AGENT_DAG
+    AGENT_DAG -- "LLM reasoning<br/>HTTPS" --> OPENAI
+    AGENT_DAG -- "RAG retrieval &<br/>resolution ingestion" --> CHROMA
+    AGENT_DAG -- "Store agent_responses" --> PG
+
+    classDef actor fill:#08427b,stroke:#052e56,color:#fff
+    classDef container fill:#438dd5,stroke:#2e6295,color:#fff
+    classDef datastore fill:#438dd5,stroke:#2e6295,color:#fff
+    classDef external fill:#999999,stroke:#6b6b6b,color:#fff
+    classDef dag fill:#85bbf0,stroke:#5d82a8,color:#000
+    classDef infra fill:#6cb33e,stroke:#4a7d2b,color:#fff
+
+    class OPS,CS actor
+    class WEB,API,PRODUCER container
+    class AF_API,AF_SCHED,AF_DAG infra
+    class BATCH_DAG,STREAM_DAG,AGENT_DAG dag
+    class REDPANDA,RP_CONSOLE container
+    class PG,CHROMA datastore
+    class OPENAI external
+```
+
+#### Container Summary
+
+| Container | Image / Build | Port | Role |
+|-----------|--------------|------|------|
+| **postgres** | `postgres:16-alpine` | 5432 | Shared DB — Airflow metadata + app tables |
+| **redpanda** | `redpandadata/redpanda:latest` | 9092 | Kafka-compatible broker (2 topics) |
+| **redpanda-console** | `redpandadata/console:latest` | 8085 | Kafka topic monitoring UI |
+| **api** | Custom (FastAPI) | 8000 | REST API, ML serving, batch upload, Airflow trigger |
+| **airflow-webserver** | Custom (Airflow) | 8080 | Airflow API server (REST + UI) |
+| **airflow-scheduler** | Custom (Airflow) | — | DAG scheduling & task execution |
+| **airflow-dag-processor** | Custom (Airflow) | — | DAG file parsing |
+| **stream-producer** | Custom (Python) | — | Simulates upstream systems (~5 events/sec) |
+| **web** (Next.js) | `web/` directory | 3000 | Operations dashboard |
+
+#### Kafka Topics
+
+| Topic | Producer | Consumer |
+|-------|----------|----------|
+| `fulfillment-events` | Stream Producer | Streaming DAG (micro-batch) |
+| `deviation-events` | Batch DAG, Streaming DAG | Agent Orchestration DAG |
+
+### 2.3 Level 3 — Component Diagram (Processing & Intelligence Core)
+
+Zooms into the shared Python codebase (`src/`) showing the 4 major component groups and their interactions.
+
+```mermaid
+graph TB
+    %% External interfaces
+    API_IN["FastAPI<br/>(POST /predict/batch)"]
+    KAFKA_IN["Redpanda<br/>fulfillment-events"]
+    KAFKA_OUT["Redpanda<br/>deviation-events"]
+    PG_STORE[("PostgreSQL")]
+    CHROMA_STORE[("Chroma<br/>RAG Vector DB")]
+    OPENAI_EXT["OpenAI API"]
+
+    subgraph INGESTION["Data Ingestion"]
+        direction TB
+        CSV["<b>CSV Handler</b><br/>src/ingestion/csv_handler.py<br/>Upload, persist, create BatchJob"]
+        VALIDATOR["<b>Schema Validator</b><br/>src/ingestion/schema_validator.py<br/>Validate 18-field enriched schema"]
+        AF_CLIENT["<b>Airflow Client</b><br/>src/api/airflow_client.py<br/>JWT auth, trigger DAG, poll state"]
     end
 
-    subgraph AIRFLOW["Airflow 3.x"]
-        BATCH_DAG["Batch DAG<br/>API-triggered"]
-        STREAM_DAG["Streaming DAG<br/>Kafka trigger · 15s / 1K micro-batch"]
-        AGENT_DAG["Agent DAG<br/>Kafka trigger"]
+    subgraph PIPELINE["Unified Pipeline"]
+        direction TB
+        TRANSFORM["<b>Feature Engineering</b><br/>src/features/transform.py<br/>Extract 10 ML features,<br/>encode categoricals"]
+        INFERENCE["<b>ML Inference</b><br/>src/ml/inference.py<br/>predict_single(), predict_batch()<br/>→ delay_probability"]
+        KPI["<b>KPI Calculator</b><br/>src/kpi/calculator.py<br/>Per-order & 30-day rolling<br/>aggregate metrics"]
+        DETECTOR["<b>Deviation Detector</b><br/>src/detection/deviation_detector.py<br/>Threshold-based severity<br/>(critical/warning/info)"]
+        PUBLISHER["<b>Deviation Publisher</b><br/>src/detection/publisher.py<br/>Publish to Kafka<br/>deviation-events topic"]
+        ORCHESTRATOR_P["<b>Pipeline Orchestrator</b><br/>src/pipeline/processor.py<br/>run_pipeline(): atomic transform →<br/>infer → KPI → detect → publish"]
     end
-
-    subgraph PIPELINE["Unified Processing Pipeline"]
-        direction LR
-        FE["Feature<br/>Engineering"] --> INFER["ML Inference"] --> KPIE["KPI Engine<br/>30-day rolling"] --> DETECT["Deviation<br/>Detector"]
-    end
-
-    PG[("PostgreSQL<br/>predictions · deviations<br/>agent_responses")]
-
-    DEV_TOPIC{{"deviation-events"}}
 
     subgraph AGENTS["Multi-Agent System"]
-        ORCH["LLM Orchestrator"]
-        SHIP["Shipment"]
-        CUST["Customer"]
-        PAY["Payment"]
-        ESC["Escalation"]
-        ORCH --> SHIP & CUST & PAY & ESC
+        direction TB
+        AGENT_ORCH["<b>Agent Orchestrator</b><br/>src/agents/orchestrator.py<br/>LLM-based routing,<br/>aggregate responses"]
+        SPECIALISTS["<b>Specialist Agents</b><br/>src/agents/specialists.py<br/>ShipmentAgent, CustomerAgent,<br/>PaymentAgent, EscalationAgent"]
+        TOOLS["<b>Agent Tools</b><br/>src/agents/tools.py<br/>reschedule_shipment(),<br/>draft_email(), issue_refund(), ..."]
     end
 
-    RAG[("Chroma · RAG<br/>Policies · SLAs · History")]
-
-    subgraph PRESENTATION["Presentation Layer"]
-        direction LR
-        API["FastAPI"]
-        DASH["Next.js"]
+    subgraph RAG["RAG Knowledge Base"]
+        direction TB
+        RAG_INGEST["<b>Document Ingestion</b><br/>src/rag/ingestion.py<br/>Chunk → embed → store<br/>(policies, SLAs, templates)"]
+        RAG_RETRIEVE["<b>Similarity Retrieval</b><br/>src/rag/retrieval.py<br/>Top-k semantic search<br/>filtered by metadata"]
+        RAG_RESOLUTION["<b>Resolution Ingestion</b><br/>dags/agent_orchestration_dag.py<br/>Ingest agent decisions back<br/>into knowledge base"]
     end
 
-    UPSTREAM --> INTEGRATION
-    CSV --> BATCH_DAG
-    PRODUCER --> STREAM_DAG
-    BATCH_DAG & STREAM_DAG --> PIPELINE
-    PIPELINE -- store --> PG
-    PG -. historical .-> KPIE
-    DETECT -- severity ≥ warning --> DEV_TOPIC
-    DEV_TOPIC --> AGENT_DAG
-    AGENT_DAG --> ORCH
-    SHIP & CUST & PAY & ESC <-. retrieve .-> RAG
-    SHIP & CUST & PAY & ESC -- store --> PG
-    SHIP & CUST & PAY & ESC -. ingest .-> RAG
-    PG --> PRESENTATION
+    %% Ingestion flows
+    API_IN -- "CSV file" --> CSV
+    CSV -- "validate rows" --> VALIDATOR
+    CSV -- "trigger batch DAG" --> AF_CLIENT
 
-    classDef infra fill:#f0f4f8,stroke:#4a5568,color:#1a202c
-    classDef orchestration fill:#ebf4ff,stroke:#3182ce,color:#1a202c
-    classDef processing fill:#fefcbf,stroke:#d69e2e,color:#1a202c
-    classDef agents fill:#fff5f5,stroke:#e53e3e,color:#1a202c
-    classDef output fill:#f0fff4,stroke:#38a169,color:#1a202c
-    classDef store fill:#f7fafc,stroke:#4a5568,color:#1a202c
-    classDef event fill:#fefcbf,stroke:#d69e2e,color:#1a202c
+    %% Pipeline flows
+    ORCHESTRATOR_P -- "1" --> TRANSFORM
+    TRANSFORM -- "2" --> INFERENCE
+    INFERENCE -- "3" --> KPI
+    KPI -- "4" --> DETECTOR
+    DETECTOR -- "5 (severity ≥ warning)" --> PUBLISHER
+    INFERENCE -- "store predictions" --> PG_STORE
+    DETECTOR -- "store deviations" --> PG_STORE
+    KPI -. "query 30-day history" .-> PG_STORE
+    PUBLISHER -- "publish" --> KAFKA_OUT
 
-    class UPSTREAM,INTEGRATION infra
-    class AIRFLOW orchestration
-    class PIPELINE processing
-    class AGENTS agents
-    class PRESENTATION output
-    class PG,RAG store
-    class DEV_TOPIC event
+    %% Agent flows
+    KAFKA_OUT -. "consumed by<br/>Agent DAG" .-> AGENT_ORCH
+    AGENT_ORCH -- "route by<br/>deviation type" --> SPECIALISTS
+    SPECIALISTS -- "execute" --> TOOLS
+    SPECIALISTS -- "store responses" --> PG_STORE
+    AGENT_ORCH -- "LLM calls" --> OPENAI_EXT
+
+    %% RAG flows
+    RAG_INGEST -- "embed & store" --> CHROMA_STORE
+    RAG_INGEST -- "embedding requests" --> OPENAI_EXT
+    RAG_RETRIEVE -- "similarity search" --> CHROMA_STORE
+    SPECIALISTS -. "pre-execution<br/>context retrieval" .-> RAG_RETRIEVE
+    SPECIALISTS -. "mid-execution<br/>knowledge search" .-> RAG_RETRIEVE
+    RAG_RESOLUTION -- "ingest resolution<br/>as knowledge" --> CHROMA_STORE
+
+    %% Kafka input
+    KAFKA_IN -. "consumed by<br/>Streaming DAG" .-> ORCHESTRATOR_P
+
+    classDef external fill:#999999,stroke:#6b6b6b,color:#fff
+    classDef component fill:#85bbf0,stroke:#5d82a8,color:#000
+    classDef datastore fill:#438dd5,stroke:#2e6295,color:#fff
+    classDef group_ingestion fill:#e8f5e9,stroke:#4caf50,color:#000
+    classDef group_pipeline fill:#fff3e0,stroke:#ff9800,color:#000
+    classDef group_agents fill:#fce4ec,stroke:#e91e63,color:#000
+    classDef group_rag fill:#e3f2fd,stroke:#2196f3,color:#000
+
+    class API_IN,KAFKA_IN,KAFKA_OUT,OPENAI_EXT external
+    class PG_STORE,CHROMA_STORE datastore
+    class CSV,VALIDATOR,AF_CLIENT,TRANSFORM,INFERENCE,KPI,DETECTOR,PUBLISHER,ORCHESTRATOR_P,AGENT_ORCH,SPECIALISTS,TOOLS,RAG_INGEST,RAG_RETRIEVE,RAG_RESOLUTION component
 ```
+
+#### Component Summary
+
+| Group | Component | Source File | Responsibility |
+|-------|-----------|-------------|----------------|
+| **Data Ingestion** | CSV Handler | `src/ingestion/csv_handler.py` | Upload CSV, persist to disk, create BatchJob record |
+| | Schema Validator | `src/ingestion/schema_validator.py` | Validate 18-field enriched order schema |
+| | Airflow Client | `src/api/airflow_client.py` | JWT-authenticated REST calls to trigger/poll Airflow DAGs |
+| **Unified Pipeline** | Feature Engineering | `src/features/transform.py` | Extract 10 ML features, encode categoricals |
+| | ML Inference | `src/ml/inference.py` | Batch/single prediction → `delay_probability` |
+| | KPI Calculator | `src/kpi/calculator.py` | Per-order scores + 30-day rolling aggregates |
+| | Deviation Detector | `src/detection/deviation_detector.py` | Threshold-based severity classification |
+| | Deviation Publisher | `src/detection/publisher.py` | Publish deviation events to Kafka |
+| | Pipeline Orchestrator | `src/pipeline/processor.py` | `run_pipeline()` — atomic transform → infer → KPI → detect → publish |
+| **Multi-Agent System** | Agent Orchestrator | `src/agents/orchestrator.py` | LLM-based routing to specialist agents |
+| | Specialist Agents | `src/agents/specialists.py` | ShipmentAgent, CustomerAgent, PaymentAgent, EscalationAgent |
+| | Agent Tools | `src/agents/tools.py` | Simulated business actions (reschedule, email, refund, escalate) |
+| **RAG Knowledge Base** | Document Ingestion | `src/rag/ingestion.py` | Chunk, embed, store policies/SLAs into Chroma |
+| | Similarity Retrieval | `src/rag/retrieval.py` | Top-k semantic search filtered by metadata |
+| | Resolution Ingestion | `dags/agent_orchestration_dag.py` | Feed agent decisions back into Chroma as knowledge |
 
 ---
 
@@ -672,6 +849,7 @@ After every agent response is stored in Postgres, it is also embedded and ingest
 | `/health` | GET | System health check |
 | `/predict` | POST | Single order prediction (JSON) |
 | `/predict/batch` | POST | Bulk predictions (CSV upload) — async, returns `batch_job_id` |
+| `/batch/` | GET | List all batch jobs (latest 50, ordered by created_at DESC) |
 | `/batch/{id}/status` | GET | Batch job processing status |
 | `/batch/{id}/predictions` | GET | All predictions for a batch upload |
 | `/batch/{id}/deviations` | GET | All deviations for a batch upload |
@@ -714,10 +892,13 @@ After every agent response is stored in Postgres, it is also embedded and ingest
 - Order tracking with prediction scores
 - Manual agent triggering (for testing)
 - Knowledge base management (view ingested docs, add new policies)
+- CSV batch upload with drag-and-drop and job progress monitoring
+- Batch job drill-down (predictions, deviations, agent responses per job)
 
 **Views:**
 - Dashboard (KPI summary, alerts, stats)
 - Orders (search, filter, drill-down with prediction details)
+- Batch Jobs (CSV upload, job monitor with status polling, detail drill-down)
 - Agents (execution logs, decision trails)
 - Knowledge Base (view documents, add policies, search)
 - Settings (thresholds, configuration)
@@ -757,11 +938,7 @@ After every agent response is stored in Postgres, it is also embedded and ingest
 | **Containerization** | Docker + Docker Compose | Cloud-native; runs all dependencies (Kafka, Airflow, API) |
 | **Notebook** | Jupyter | Standard for EDA and ML experimentation |
 | **Testing** | pytest | Comprehensive, fixtures, plugin ecosystem |
-
-### Stretch Goal Stack
-| Component | Technology | Justification |
-|-----------|-----------|---------------|
-| **Dashboard** | Next.js + Tailwind | Premium, responsive UI; high interactivity |
+| **Dashboard** | Next.js + Tailwind CSS | Operations UI with SWR polling, glassmorphic dark theme, batch upload, KPI visualization |
 
 ---
 
@@ -853,14 +1030,17 @@ docker-compose up -d
 - Policy documents + historical resolution ingestion
 - REST API (FastAPI)
 - Docker Compose setup (all services)
-
-### Stretch Goals
-- Next.js operations dashboard (queries Postgres via API)
+- Next.js operations dashboard — KPI visualization, order tracking, agent activity, batch upload & monitoring, knowledge base management
 
 ### Future Extensions (v2+)
-- Per-segment ML models
-- Email/SMS integration for customer communication
-- Resilience, fault tolerance, and scalability
+- **Per-segment ML models** — Train specialized classifiers per warehouse block, shipment mode, or product importance for higher accuracy
+- **Real upstream integrations** — Replace simulated data with live OMS/WMS/TMS/CRM feeds and real Kafka topics
+- **Email/SMS integration** — Connect Customer Service Agent to real notification services (SendGrid, Twilio)
+- **Authentication & RBAC** — OAuth2/SSO login with role-based access (admin, operations, read-only)
+- **Model versioning & A/B testing** — MLflow registry with shadow scoring to compare model versions in production
+- **Horizontal scaling** — CeleryExecutor or KubernetesExecutor for Airflow, multi-replica API behind a load balancer
+- **Alerting & observability** — Prometheus metrics, Grafana dashboards, PagerDuty integration for critical deviation spikes
+- **Feedback loop** — Capture actual delivery outcomes to retrain the model on real performance data
 
 ---
 

@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import {
     LayoutDashboard,
     Package,
+    FileUp,
     Bot,
     BookOpen,
     Settings,
@@ -15,6 +16,7 @@ import {
 const navigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
     { name: "Orders", href: "/orders", icon: Package },
+    { name: "Batch Jobs", href: "/batch", icon: FileUp },
     { name: "Agents", href: "/agents", icon: Bot },
     { name: "Knowledge Base", href: "/knowledge", icon: BookOpen },
     { name: "Settings", href: "/settings", icon: Settings },

@@ -92,6 +92,10 @@ class BatchStatusResponse(BaseModel):
     error_message: str | None = None
 
 
+class BatchListResponse(BaseModel):
+    jobs: list[BatchStatusResponse]
+
+
 # ---------------------------------------------------------------------------
 # Deviation
 # ---------------------------------------------------------------------------

@@ -9,8 +9,11 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from langchain_core.messages import AIMessage
+
 from src.agents.orchestrator import AgentOrchestrator, _ROUTING_RULES
 from src.agents.specialists import (
+    MAX_ITERATIONS,
     CustomerAgent,
     EscalationAgent,
     PaymentAgent,
@@ -457,3 +460,235 @@ class TestOrchestratorStorage:
         assert len(results) == 2
         # No records stored because deviation_id is None
         assert session.query(AgentResponse).count() == 0
+
+
+# ---------------------------------------------------------------------------
+# Helper for agentic-loop tests
+# ---------------------------------------------------------------------------
+
+
+def _make_tool_calling_llm(tool_responses: list[list[dict]], final_content: str):
+    """Create an LLM mock that returns tool calls for N iterations then a final text.
+
+    Parameters
+    ----------
+    tool_responses:
+        List of lists.  Each inner list contains tool-call dicts
+        ``{"name": ..., "args": ..., "id": ...}`` for one iteration.
+    final_content:
+        The text content for the final response (no tool calls).
+    """
+    side_effects = []
+    for tc_list in tool_responses:
+        msg = AIMessage(content="", tool_calls=tc_list)
+        side_effects.append(msg)
+    # Final response with text only
+    side_effects.append(AIMessage(content=final_content))
+
+    mock = MagicMock()
+    mock.bind_tools.return_value = mock
+    mock.ainvoke = AsyncMock(side_effect=side_effects)
+    return mock
+
+
+# ---------------------------------------------------------------------------
+# Agentic loop tests
+# ---------------------------------------------------------------------------
+
+
+class TestAgenticLoop:
+    """Tests for the iterative tool-use loop in _BaseAgent.run()."""
+
+    @pytest.mark.asyncio
+    async def test_single_tool_call_and_response(self):
+        """LLM calls 1 tool, sees result, gives final answer."""
+        tool_calls = [[{
+            "name": "reschedule_shipment",
+            "args": {"order_id": "ORD-001", "new_mode": "Flight", "reason": "Delay"},
+            "id": "call_1",
+        }]]
+        llm = _make_tool_calling_llm(tool_calls, "Shipment rescheduled successfully.")
+        agent = ShipmentAgent(llm=llm)
+        result = await agent.run(SAMPLE_DEVIATION_CONTEXT)
+
+        assert result["action"] == "Shipment rescheduled successfully."
+        assert len(result["details"]["tool_calls"]) == 1
+        assert result["details"]["tool_calls"][0]["tool"] == "reschedule_shipment"
+        # ainvoke called twice: once returning tool call, once returning text
+        assert llm.ainvoke.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_multiple_tool_calls_across_iterations(self):
+        """LLM calls tools across 2 iterations then gives final answer."""
+        tool_calls = [
+            [{
+                "name": "check_carrier_status",
+                "args": {"order_id": "ORD-001", "carrier": "FedEx"},
+                "id": "call_1",
+            }],
+            [{
+                "name": "reschedule_shipment",
+                "args": {"order_id": "ORD-001", "new_mode": "Flight", "reason": "Carrier delayed"},
+                "id": "call_2",
+            }],
+        ]
+        llm = _make_tool_calling_llm(tool_calls, "Checked carrier and rescheduled.")
+        agent = ShipmentAgent(llm=llm)
+        result = await agent.run(SAMPLE_DEVIATION_CONTEXT)
+
+        assert len(result["details"]["tool_calls"]) == 2
+        assert result["details"]["tool_calls"][0]["tool"] == "check_carrier_status"
+        assert result["details"]["tool_calls"][1]["tool"] == "reschedule_shipment"
+        # ainvoke called 3 times: tool_call, tool_call, final text
+        assert llm.ainvoke.call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_no_tool_calls_immediate_response(self):
+        """LLM responds with text immediately (no tool calls)."""
+        llm = _make_tool_calling_llm([], "No action needed for this deviation.")
+        agent = ShipmentAgent(llm=llm)
+        result = await agent.run(SAMPLE_DEVIATION_CONTEXT)
+
+        assert result["action"] == "No action needed for this deviation."
+        assert len(result["details"]["tool_calls"]) == 0
+        assert llm.ainvoke.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_max_iterations_cap(self):
+        """Loop stops at MAX_ITERATIONS even if LLM keeps requesting tools."""
+        # Create more tool call rounds than MAX_ITERATIONS
+        tool_calls = [
+            [{"name": "check_carrier_status", "args": {"order_id": "ORD-001", "carrier": "FedEx"}, "id": f"call_{i}"}]
+            for i in range(10)
+        ]
+        # Build side effects manually — all tool calls, no final text within limit
+        side_effects = [AIMessage(content="", tool_calls=tc) for tc in tool_calls]
+        mock = MagicMock()
+        mock.bind_tools.return_value = mock
+        mock.ainvoke = AsyncMock(side_effect=side_effects)
+
+        agent = ShipmentAgent(llm=mock)
+        result = await agent.run(SAMPLE_DEVIATION_CONTEXT)
+
+        # Should stop at exactly MAX_ITERATIONS
+        assert mock.ainvoke.call_count == MAX_ITERATIONS
+        assert len(result["details"]["tool_calls"]) == MAX_ITERATIONS
+        assert "agent_type" in result
+
+    @pytest.mark.asyncio
+    async def test_conversation_history_includes_tool_messages(self):
+        """Verify conversation history contains system, user, assistant, and tool roles."""
+        tool_calls = [[{
+            "name": "draft_email",
+            "args": {"order_id": "ORD-001", "template": "apology", "context": "Delay"},
+            "id": "call_1",
+        }]]
+        llm = _make_tool_calling_llm(tool_calls, "Email drafted and ready.")
+        agent = CustomerAgent(llm=llm)
+        result = await agent.run(SAMPLE_DEVIATION_CONTEXT)
+
+        history = result["conversation_history"]
+        roles = [entry["role"] for entry in history]
+        assert "system" in roles
+        assert "user" in roles
+        assert "assistant" in roles
+        assert "tool" in roles
+        # Tool message should have tool_call_id
+        tool_entries = [e for e in history if e["role"] == "tool"]
+        assert len(tool_entries) == 1
+        assert "tool_call_id" in tool_entries[0]
+
+    @pytest.mark.asyncio
+    async def test_unknown_tool_returns_error(self):
+        """LLM requests a nonexistent tool — error dict in results."""
+        tool_calls = [[{
+            "name": "nonexistent_tool",
+            "args": {"foo": "bar"},
+            "id": "call_1",
+        }]]
+        llm = _make_tool_calling_llm(tool_calls, "Handled with error.")
+        agent = ShipmentAgent(llm=llm)
+        result = await agent.run(SAMPLE_DEVIATION_CONTEXT)
+
+        assert len(result["details"]["tool_calls"]) == 1
+        assert "error" in result["details"]["tool_calls"][0]["result"]
+        assert "nonexistent_tool" in result["details"]["tool_calls"][0]["result"]["error"]
+
+
+# ---------------------------------------------------------------------------
+# LLM routing tests
+# ---------------------------------------------------------------------------
+
+
+def _make_routing_llm(agent_names: list[str]):
+    """Create a mock LLM that selects the given agents via tool call."""
+    response = AIMessage(
+        content="",
+        tool_calls=[{
+            "name": "select_agents",
+            "args": {"agents": agent_names},
+            "id": "route_1",
+        }],
+    )
+    mock = MagicMock()
+    mock.bind_tools.return_value = mock
+    mock.ainvoke = AsyncMock(return_value=response)
+    return mock
+
+
+class TestLLMRouting:
+    """Tests for LLM-based agent routing in AgentOrchestrator."""
+
+    @pytest.mark.asyncio
+    async def test_llm_routes_to_payment_agent(self):
+        """LLM selects payment + customer agents (payment never selected by severity rules)."""
+        routing_llm = _make_routing_llm(["payment", "customer"])
+        # Use a failing LLM for the agents themselves so they hit fallback
+        agent_llm = _make_failing_llm()
+
+        orch = AgentOrchestrator(llm=routing_llm)
+        # Patch _llm_select_agents to use routing_llm, but agents use agent_llm
+        original_llm_select = orch._llm_select_agents
+
+        async def patched_select(ctx):
+            return await original_llm_select(ctx)
+
+        orch._llm_select_agents = patched_select
+
+        # We need agents to actually run, so patch agent creation to use failing LLM
+        from src.agents.orchestrator import _AGENT_CLASS_MAP
+        original_map = dict(_AGENT_CLASS_MAP)
+
+        ctx = {**SAMPLE_DEVIATION_CONTEXT, "severity": "critical"}
+        results = await orch.orchestrate(ctx)
+
+        assert len(results) == 2
+        types = {r["agent_type"] for r in results}
+        assert "payment" in types
+        assert "customer" in types
+
+    @pytest.mark.asyncio
+    async def test_llm_routing_fallback_on_failure(self):
+        """Failing routing LLM falls back to severity rules."""
+        llm = _make_failing_llm()
+        orch = AgentOrchestrator(llm=llm)
+        ctx = {**SAMPLE_DEVIATION_CONTEXT, "severity": "critical"}
+        results = await orch.orchestrate(ctx)
+
+        # Severity rules for critical: shipment, customer, escalation
+        assert len(results) == 3
+        types = {r["agent_type"] for r in results}
+        assert types == {"shipment", "customer", "escalation"}
+
+    @pytest.mark.asyncio
+    async def test_llm_routing_empty_selection_falls_back(self):
+        """LLM selects empty list → severity fallback kicks in."""
+        routing_llm = _make_routing_llm([])
+        orch = AgentOrchestrator(llm=routing_llm)
+        ctx = {**SAMPLE_DEVIATION_CONTEXT, "severity": "warning"}
+        results = await orch.orchestrate(ctx)
+
+        # Severity rules for warning: shipment, customer
+        assert len(results) == 2
+        types = {r["agent_type"] for r in results}
+        assert types == {"shipment", "customer"}

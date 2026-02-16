@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+
 from src.agents.tools import (
     CUSTOMER_TOOLS,
     ESCALATION_TOOLS,
@@ -13,6 +15,8 @@ from src.agents.tools import (
 )
 
 logger = logging.getLogger(__name__)
+
+MAX_ITERATIONS = 5
 
 
 class _BaseAgent:
@@ -61,8 +65,40 @@ class _BaseAgent:
             logger.warning("RAG retrieval failed for %s", self.AGENT_TYPE, exc_info=True)
         return ""
 
+    @staticmethod
+    def _serialize_messages(messages: list) -> list[dict[str, Any]]:
+        """Convert LangChain message objects to JSON-serializable dicts."""
+        result = []
+        for msg in messages:
+            if isinstance(msg, SystemMessage):
+                result.append({"role": "system", "content": msg.content})
+            elif isinstance(msg, HumanMessage):
+                result.append({"role": "user", "content": msg.content})
+            elif isinstance(msg, AIMessage):
+                entry: dict[str, Any] = {"role": "assistant", "content": msg.content}
+                if msg.tool_calls:
+                    entry["tool_calls"] = [
+                        {"id": tc["id"], "name": tc["name"], "args": tc["args"]}
+                        for tc in msg.tool_calls
+                    ]
+                result.append(entry)
+            elif isinstance(msg, ToolMessage):
+                result.append({
+                    "role": "tool",
+                    "content": msg.content,
+                    "tool_call_id": msg.tool_call_id,
+                })
+            else:
+                result.append({"role": "unknown", "content": str(msg)})
+        return result
+
     async def run(self, deviation_context: dict[str, Any]) -> dict[str, Any]:
-        """Execute the agent with RAG context injection.
+        """Execute the agent with an agentic tool-use loop.
+
+        The LLM is called iteratively: it may request tool calls, whose
+        results are fed back so the LLM can reason over them.  The loop
+        terminates when the LLM responds with text only (no tool calls)
+        or after MAX_ITERATIONS rounds.
 
         Parameters
         ----------
@@ -76,12 +112,10 @@ class _BaseAgent:
         llm = self._get_llm()
         rag_context = self._retrieve_context(deviation_context)
 
-        # Build the prompt
-        messages = [
-            {"role": "system", "content": self.SYSTEM_PROMPT},
-        ]
+        # Build initial messages using LangChain types
+        lc_messages: list = [SystemMessage(content=self.SYSTEM_PROMPT)]
         if rag_context:
-            messages.append({"role": "system", "content": rag_context})
+            lc_messages.append(SystemMessage(content=rag_context))
 
         user_message = (
             f"Deviation detected:\n"
@@ -91,42 +125,65 @@ class _BaseAgent:
             f"- Delay Probability: {deviation_context.get('delay_probability', 'unknown')}\n\n"
             f"Analyze the situation and take appropriate action using your available tools."
         )
-        messages.append({"role": "user", "content": user_message})
+        lc_messages.append(HumanMessage(content=user_message))
+
+        # Build tool lookup
+        tool_map = {t.name: t for t in self.TOOLS}
 
         try:
             llm_with_tools = llm.bind_tools(self.TOOLS)
-            from langchain_core.messages import HumanMessage, SystemMessage
-
-            lc_messages = []
-            for msg in messages:
-                if msg["role"] == "system":
-                    lc_messages.append(SystemMessage(content=msg["content"]))
-                else:
-                    lc_messages.append(HumanMessage(content=msg["content"]))
-
-            response = await llm_with_tools.ainvoke(lc_messages)
-            action = response.content if hasattr(response, "content") else str(response)
-            tool_calls = response.tool_calls if hasattr(response, "tool_calls") else []
-
-            # Execute tool calls
             details: dict[str, Any] = {"tool_calls": []}
-            for tc in tool_calls:
-                tool_name = tc.get("name", "") if isinstance(tc, dict) else getattr(tc, "name", "")
-                tool_args = tc.get("args", {}) if isinstance(tc, dict) else getattr(tc, "args", {})
-                # Find and invoke the tool
-                for t in self.TOOLS:
-                    if t.name == tool_name:
-                        result = t.invoke(tool_args)
+            action = ""
+
+            for _iteration in range(MAX_ITERATIONS):
+                response = await llm_with_tools.ainvoke(lc_messages)
+                lc_messages.append(response)
+
+                tool_calls = response.tool_calls if hasattr(response, "tool_calls") else []
+
+                if not tool_calls:
+                    # Final text-only response — we're done
+                    action = response.content if hasattr(response, "content") else str(response)
+                    break
+
+                # Execute each tool call and append ToolMessage results
+                for tc in tool_calls:
+                    tool_name = tc.get("name", "") if isinstance(tc, dict) else getattr(tc, "name", "")
+                    tool_args = tc.get("args", {}) if isinstance(tc, dict) else getattr(tc, "args", {})
+                    tool_call_id = tc.get("id", "") if isinstance(tc, dict) else getattr(tc, "id", "")
+
+                    if tool_name in tool_map:
+                        result = tool_map[tool_name].invoke(tool_args)
                         details["tool_calls"].append(
                             {"tool": tool_name, "args": tool_args, "result": result}
                         )
-                        break
+                        lc_messages.append(
+                            ToolMessage(content=str(result), tool_call_id=tool_call_id)
+                        )
+                    else:
+                        error = {"error": f"Unknown tool: {tool_name}"}
+                        details["tool_calls"].append(
+                            {"tool": tool_name, "args": tool_args, "result": error}
+                        )
+                        lc_messages.append(
+                            ToolMessage(content=str(error), tool_call_id=tool_call_id)
+                        )
+            else:
+                # Max iterations reached without a text-only response
+                logger.warning(
+                    "%s hit MAX_ITERATIONS (%d) without final text response",
+                    self.AGENT_TYPE,
+                    MAX_ITERATIONS,
+                )
+                # Use the last AI message content as the action
+                last_ai = response.content if hasattr(response, "content") else ""
+                action = last_ai or f"{self.AGENT_TYPE}_max_iterations_reached"
 
             return {
                 "agent_type": self.AGENT_TYPE,
                 "action": action[:200] if action else f"{self.AGENT_TYPE}_action_taken",
                 "details": details,
-                "conversation_history": messages + [{"role": "assistant", "content": action}],
+                "conversation_history": self._serialize_messages(lc_messages),
             }
         except Exception as e:
             logger.warning("LLM call failed for %s: %s", self.AGENT_TYPE, e, exc_info=True)

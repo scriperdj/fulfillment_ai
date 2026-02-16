@@ -61,6 +61,7 @@ class BatchJob(Base):
         DateTime(timezone=True), nullable=True
     )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    dag_run_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
 
     # Relationships
     predictions: Mapped[list["Prediction"]] = relationship(

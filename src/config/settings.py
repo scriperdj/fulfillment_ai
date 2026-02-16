@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
 
+    # Airflow
+    AIRFLOW_API_URL: str = "http://airflow-webserver:8080"
+    AIRFLOW_USERNAME: str = "admin"
+    AIRFLOW_PASSWORD: str = "admin"
+
     # KPI
     KPI_ROLLING_WINDOW_DAYS: int = 30
     FULFILLMENT_GAP_THRESHOLD: Optional[float] = None

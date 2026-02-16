@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
@@ -18,7 +19,17 @@ from src.api.schemas import (
 from src.db.models import AgentResponse, BatchJob, Deviation, Prediction
 from src.ingestion.csv_handler import upload_csv
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/batch", tags=["batch"])
+
+# Airflow DAG run state → user-friendly batch status
+_AIRFLOW_STATE_MAP: dict[str, str] = {
+    "queued": "queued",
+    "running": "running",
+    "success": "completed",
+    "failed": "failed",
+}
 
 
 def _get_batch_job(batch_id: str, session: Session) -> BatchJob:
@@ -35,6 +46,18 @@ def _get_batch_job(batch_id: str, session: Session) -> BatchJob:
 @router.post("/upload", response_model=BatchUploadResponse, status_code=201)
 def batch_upload(file: UploadFile, session: Session = Depends(get_db)):
     job = upload_csv(file.file, session=session)
+
+    # Trigger Airflow batch DAG asynchronously
+    from src.api.airflow_client import trigger_batch_dag
+
+    dag_run_id = trigger_batch_dag(str(job.id))
+    if dag_run_id:
+        job.dag_run_id = dag_run_id
+        job.status = "queued"
+        session.flush()
+    else:
+        logger.warning("Could not trigger DAG for batch %s — job will stay pending", job.id)
+
     return BatchUploadResponse(
         batch_job_id=str(job.id),
         filename=job.filename,
@@ -46,9 +69,26 @@ def batch_upload(file: UploadFile, session: Session = Depends(get_db)):
 @router.get("/{batch_id}/status", response_model=BatchStatusResponse)
 def batch_status(batch_id: str, session: Session = Depends(get_db)):
     job = _get_batch_job(batch_id, session)
+
+    status = job.status
+
+    # If the job hasn't reached a terminal state and we have a DAG run,
+    # query Airflow for the live execution state.
+    if status not in ("completed", "failed") and job.dag_run_id:
+        from src.api.airflow_client import get_dag_run_state
+
+        airflow_state = get_dag_run_state(job.dag_run_id)
+        if airflow_state:
+            mapped = _AIRFLOW_STATE_MAP.get(airflow_state, airflow_state)
+            # Persist terminal states so we don't keep querying Airflow
+            if mapped in ("completed", "failed") and status != mapped:
+                job.status = mapped
+                session.flush()
+            status = mapped
+
     return BatchStatusResponse(
         batch_job_id=str(job.id),
-        status=job.status,
+        status=status,
         filename=job.filename,
         row_count=job.row_count,
         created_at=job.created_at,

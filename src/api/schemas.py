@@ -138,6 +138,15 @@ class AgentResponseRecord(BaseModel):
     created_at: datetime | None = None
 
 
+class AgentActivity(BaseModel):
+    id: str
+    agent_type: str
+    action: str
+    order_id: str
+    created_at: datetime
+    details: dict[str, Any] | None = None
+
+
 # ---------------------------------------------------------------------------
 # Order detail (aggregated view)
 # ---------------------------------------------------------------------------

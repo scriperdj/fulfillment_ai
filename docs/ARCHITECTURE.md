@@ -62,7 +62,7 @@ flowchart TD
     subgraph PRESENTATION["Presentation Layer"]
         direction LR
         API["FastAPI"]
-        DASH["Streamlit"]
+        DASH["Next.js"]
     end
 
     UPSTREAM --> INTEGRATION
@@ -703,10 +703,10 @@ After every agent response is stored in Postgres, it is also embedded and ingest
 
 ---
 
-### 5.11 Monitoring Dashboard 
-**Responsibility:** Visual monitoring and manual intervention interface
+### 5.11 Operations Dashboard
+**Capability: Next.js Operations Dashboard** — Visual monitoring and manual intervention interface
 
-**Technology:** Streamlit, Plotly, Pandas
+**Technology:** Next.js, Tailwind CSS, Framer Motion, Shadcn UI
 **Features:**
 - Real-time KPI visualization (charts, gauges)
 - Deviation alerts (color-coded severity)
@@ -761,7 +761,7 @@ After every agent response is stored in Postgres, it is also embedded and ingest
 ### Stretch Goal Stack
 | Component | Technology | Justification |
 |-----------|-----------|---------------|
-| **Dashboard** | Streamlit + Plotly | Rapid development; interactive visualizations; queries KPI data from Postgres via API |
+| **Dashboard** | Next.js + Tailwind | Premium, responsive UI; high interactivity |
 
 ---
 
@@ -803,7 +803,7 @@ docker-compose up -d
 | `airflow-scheduler` | apache/airflow | — | DAG scheduling + execution |
 | `postgres` | postgres | 5432 | Shared DB: Airflow metadata + application data (batch_jobs, predictions, deviations, agent_responses) |
 | `stream-producer` | Custom | — | Simulator (generates enriched order events to Kafka) |
-| `streamlit` | Custom | 8501 | Monitoring dashboard (stretch) |
+| `web` | Next.js | 3000 | Operational Dashboard (UI) |
 
 ### 7.3 Production Considerations
 - Environment-based config (`.env` files)
@@ -830,7 +830,7 @@ docker-compose up -d
 3. **Single Model** - One classifier for all segments (could train per-segment models in v2)
 4. **Knowledge Base Scope** - Policy documents are representative examples; production would have full company knowledge
 5. **Streaming Simulation** - Kafka producer generates synthetic events, not real upstream data
-6. **Dashboard Scalability** - Streamlit designed for single concurrent user
+6. **Production Data** - Simulated upstream data is not real-time; Next.js dashboard uses polling/SWR for "live" feel
 
 ---
 
@@ -855,7 +855,7 @@ docker-compose up -d
 - Docker Compose setup (all services)
 
 ### Stretch Goals
-- Streamlit monitoring dashboard (queries Postgres via API)
+- Next.js operations dashboard (queries Postgres via API)
 
 ### Future Extensions (v2+)
 - Per-segment ML models
@@ -904,4 +904,3 @@ docker-compose up -d
 - **Why Chroma:** In-process, persists to disk, zero external dependencies
 - **3 Ingestion Paths:** Static policies at startup + historical resolutions at runtime + admin API for live updates
 - **2 Query Modes:** Pre-execution retrieval (automatic) + mid-execution tool (agent-initiated)
-
